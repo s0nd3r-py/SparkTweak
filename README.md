@@ -13,7 +13,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d6?logo=windows)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-[**⬇ Скачать установщик**](https://github.com/s0nd3r-py/SparkTweak/releases/latest/download/SparkTweak-Setup.exe) · [Портативная версия](https://github.com/s0nd3r-py/SparkTweak/releases/latest/download/SparkTweak-Portable.exe) · [Что внутри](#-что-умеет) · [Безопасность](#-безопасность) · [Сборка](#-сборка-из-исходников)
+[**⬇ Скачать установщик**](https://github.com/s0nd3r-py/SparkTweak/releases/latest/download/SparkTweak-Setup.exe) · [Портативная версия](https://github.com/s0nd3r-py/SparkTweak/releases/latest/download/SparkTweak-Portable.exe) · [Что внутри](#-что-умеет) · [Безопасность](#-безопасность) · [Сборка](#-сборка-из-исходников) · [🇬🇧 English](#-english)
 
 <img src="docs/screenshots/overview.png" alt="SparkTweak — обзор" width="100%" />
 
@@ -30,6 +30,7 @@
 | 🔍 **Ничего не спрятано** | Все 120 твиков и действий — это обычные записи реестра, службы и команды Windows, описанные данными в [`tweaks.rs`](app/src/tweaks.rs). Перед применением их можно прочитать. |
 | 🪶 **Лёгкий и нативный** | Один exe на Rust, без .NET, Electron и фоновых служб. Окно на GPU через egui с настоящим размытием Windows (acrylic). |
 | 🧪 **Проверено тестами** | CI прогоняет каждую проверку состояния в настоящем PowerShell и разбирает каждый скрипт парсером PowerShell. Опечатка в твике не попадёт в релиз. |
+| 🌍 **Русский и английский** | Переключатель RU / EN в заголовке окна. При первом запуске язык берётся из Windows. |
 
 ## 📸 Скриншоты
 
@@ -134,6 +135,24 @@ Tweak {
 ```
 
 Применение, откат и проверка состояния сгенерируются автоматически. Тесты сами прогонят новую проверку в PowerShell.
+
+## 🇬🇧 English
+
+**SparkTweak is a one-click Windows 10/11 optimizer written in Rust**, with a dark liquid-glass interface in Russian and English (switch RU / EN in the title bar).
+
+<img src="docs/screenshots/overview-en.png" alt="SparkTweak overview in English" width="100%" />
+
+- **87 reversible tweaks and 33 tools** across Performance, Memory, Gaming, Network, Privacy, PowerShell, Interface, Services, Cleanup, Drivers and System.
+- **Three one-click profiles** (Recommended, Gaming, Maximum). A restore point is created automatically first. Maximum never includes tweaks marked *risky*.
+- **RAM cleaner** built on `NtSetSystemInformation`: working sets, standby list (like ISLC) and modified pages, with an optional auto-clean timer.
+- **Drivers** via Windows Update: find, install, back up, list problem devices.
+- **Startup manager** (same mechanism as Task Manager) and **removal of 37 preinstalled apps**.
+- **Everything reverts with one click**, and each switch shows the real state read from your system.
+- **Rust installer**: installs for everyone (with admin rights) or just for you in `%LOCALAPPDATA%\Programs\SparkTweak` (no admin needed). Uninstall from Settings → Apps.
+
+[**⬇ Download the installer**](https://github.com/s0nd3r-py/SparkTweak/releases/latest/download/SparkTweak-Setup.exe) · [Portable](https://github.com/s0nd3r-py/SparkTweak/releases/latest/download/SparkTweak-Portable.exe)
+
+The exe is not code-signed yet, so SmartScreen may warn you: *More info → Run anyway*. SHA-256 checksums ship with every release. Build from source with `cargo build --release -p sparktweak`, then `-p sparktweak-setup`.
 
 ## 📄 Лицензия
 

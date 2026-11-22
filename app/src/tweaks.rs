@@ -18,19 +18,26 @@ pub enum Cat {
 
 use crate::style::ic;
 
-pub const CATS: &[(Cat, &str, &str, &str)] = &[
-    (Cat::Perf, ic::ROCKET, "Производительность", "Отклик системы, питание, планировщик и CPU"),
-    (Cat::Memory, ic::MEMORY, "Память", "Очистка RAM в реальном времени и снижение потребления"),
-    (Cat::Games, ic::GAME, "Игры", "Задержки ввода, FPS, приоритеты и таймеры"),
-    (Cat::Network, ic::GLOBE, "Сеть", "Пинг, пропускная способность, DNS"),
-    (Cat::Privacy, ic::LOCK, "Приватность", "Телеметрия, реклама, Copilot и Recall"),
-    (Cat::PowerShell, ic::TERMINAL, "PowerShell", "Быстрый запуск, телеметрия и безопасность"),
-    (Cat::Interface, ic::PALETTE, "Интерфейс", "Explorer, панель задач, меню и анимации"),
-    (Cat::Services, ic::GEAR, "Службы", "Отключение лишних служб Windows"),
-    (Cat::Cleanup, ic::BROOM, "Очистка", "Временные файлы, кэши, корзина и мусор"),
-    (Cat::Drivers, ic::WRENCH, "Драйверы", "Поиск, установка и резервная копия драйверов"),
-    (Cat::System, ic::TOOLBOX, "Система", "Восстановление, проверка и обслуживание"),
+/// (раздел, иконка, название RU, подпись RU, название EN, подпись EN)
+pub const CATS: &[(Cat, &str, &str, &str, &str, &str)] = &[
+    (Cat::Perf, ic::ROCKET, "Производительность", "Отклик системы, питание, планировщик и CPU", "Performance", "Responsiveness, power, scheduler and CPU"),
+    (Cat::Memory, ic::MEMORY, "Память", "Очистка RAM в реальном времени и снижение потребления", "Memory", "Live RAM cleaning and lower usage"),
+    (Cat::Games, ic::GAME, "Игры", "Задержки ввода, FPS, приоритеты и таймеры", "Gaming", "Input latency, FPS, priorities and timers"),
+    (Cat::Network, ic::GLOBE, "Сеть", "Пинг, пропускная способность, DNS", "Network", "Ping, bandwidth and DNS"),
+    (Cat::Privacy, ic::LOCK, "Приватность", "Телеметрия, реклама, Copilot и Recall", "Privacy", "Telemetry, ads, Copilot and Recall"),
+    (Cat::PowerShell, ic::TERMINAL, "PowerShell", "Быстрый запуск, телеметрия и безопасность", "PowerShell", "Fast startup, telemetry and security"),
+    (Cat::Interface, ic::PALETTE, "Интерфейс", "Explorer, панель задач, меню и анимации", "Interface", "Explorer, taskbar, menus and animations"),
+    (Cat::Services, ic::GEAR, "Службы", "Отключение лишних служб Windows", "Services", "Turn off unneeded Windows services"),
+    (Cat::Cleanup, ic::BROOM, "Очистка", "Временные файлы, кэши, корзина и мусор", "Cleanup", "Temp files, caches, Recycle Bin and junk"),
+    (Cat::Drivers, ic::WRENCH, "Драйверы", "Поиск, установка и резервная копия драйверов", "Drivers", "Find, install and back up drivers"),
+    (Cat::System, ic::TOOLBOX, "Система", "Восстановление, проверка и обслуживание", "System", "Recovery, checks and maintenance"),
 ];
+
+/// Иконка, название и подпись раздела на текущем языке.
+pub fn cat_info(c: Cat) -> (&'static str, &'static str, &'static str) {
+    let x = CATS.iter().find(|x| x.0 == c).expect("раздел есть в CATS");
+    (x.1, crate::i18n::l(x.2, x.4), crate::i18n::l(x.3, x.5))
+}
 
 #[derive(Clone, Copy)]
 pub enum V {
@@ -44,6 +51,8 @@ pub struct Reg(pub &'static str, pub &'static str, pub V, pub Option<V>);
 pub struct Tweak {
     pub name: &'static str,
     pub desc: &'static str,
+    /// Английские название и описание.
+    pub en: (&'static str, &'static str),
     pub cat: Cat,
     pub regs: &'static [Reg],
     pub apply: &'static str,
@@ -59,6 +68,14 @@ pub struct Tweak {
 }
 
 impl Tweak {
+    pub fn title(&self) -> &'static str {
+        crate::i18n::l(self.name, self.en.0)
+    }
+
+    pub fn about(&self) -> &'static str {
+        crate::i18n::l(self.desc, self.en.1)
+    }
+
     pub fn is_action(&self) -> bool {
         self.regs.is_empty() && self.revert.is_empty()
     }
@@ -67,6 +84,7 @@ impl Tweak {
 const T: Tweak = Tweak {
     name: "",
     desc: "",
+    en: ("", ""),
     cat: Cat::Perf,
     regs: &[],
     apply: "",
@@ -98,8 +116,9 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "План питания «Максимальная производительность»",
         desc: "Создаёт и включает скрытую схему Ultimate Performance: CPU не сбрасывает частоты, нет задержек выхода из простоя.",
+        en: ("Ultimate Performance power plan", "Creates and activates the hidden Ultimate Performance scheme: no CPU downclocking, no idle exit latency."),
         cat: Perf,
-        apply: r#"$o = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61; $g = [regex]::Match("$o", '[0-9a-fA-F]{8}-[0-9a-fA-F-]{27}').Value; powercfg -changename $g "SparkTweak Ultimate" | Out-Null; powercfg -setactive $g; "Активна схема $g""#,
+        apply: r#"$o = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61; $g = [regex]::Match("$o", '[0-9a-fA-F]{8}-[0-9a-fA-F-]{27}').Value; powercfg -changename $g "SparkTweak Ultimate" | Out-Null; powercfg -setactive $g; (T "Активна схема $g" "Active scheme $g")"#,
         revert: "powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e",
         check: "\"$(powercfg /getactivescheme)\" -match 'SparkTweak'",
         rec: true,
@@ -109,6 +128,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Power Throttling",
         desc: "Windows перестаёт искусственно замедлять фоновые процессы ради экономии энергии.",
+        en: ("Disable Power Throttling", "Windows stops artificially slowing down background processes to save power."),
         cat: Perf,
         regs: &[Reg(r"HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", D(1), None)],
         rec: true,
@@ -119,6 +139,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Приоритет активного окна",
         desc: "Win32PrioritySeparation = 0x26: короткие кванты с усилением для программы на переднем плане.",
+        en: ("Foreground window priority", "Win32PrioritySeparation = 0x26: short quanta with a boost for the app in the foreground."),
         cat: Perf,
         regs: &[Reg(r"HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl", "Win32PrioritySeparation", D(0x26), Some(D(2)))],
         rec: true,
@@ -128,6 +149,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отзывчивость мультимедиа",
         desc: "SystemResponsiveness = 10: фоновым задачам остаётся меньше CPU, переднему плану больше.",
+        en: ("Multimedia responsiveness", "SystemResponsiveness = 10: less CPU reserved for background tasks, more for the foreground."),
         cat: Perf,
         regs: &[Reg(MM, "SystemResponsiveness", D(10), Some(D(20)))],
         rec: true,
@@ -137,6 +159,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Аппаратное планирование GPU (HAGS)",
         desc: "Видеокарта сама управляет своей памятью и очередями. Меньше задержка и нагрузка на CPU.",
+        en: ("Hardware-accelerated GPU scheduling", "The GPU manages its own memory and queues. Lower latency and CPU load."),
         cat: Perf,
         regs: &[Reg(r"HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", D(2), Some(D(1)))],
         game: true,
@@ -146,6 +169,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Мгновенные меню",
         desc: "Убирает задержку 400 мс перед открытием подменю.",
+        en: ("Instant menus", "Removes the 400 ms delay before submenus open."),
         cat: Perf,
         regs: &[Reg(DESK, "MenuShowDelay", S("0"), Some(S("400")))],
         rec: true,
@@ -154,6 +178,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Быстрое завершение работы",
         desc: "Зависшие программы и службы закрываются за 2 секунды, а не 5–20.",
+        en: ("Fast shutdown", "Hung apps and services are closed after 2 seconds instead of 5–20."),
         cat: Perf,
         regs: &[
             Reg(r"HKLM:\SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", S("2000"), Some(S("5000"))),
@@ -167,6 +192,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без задержки автозагрузки",
         desc: "Программы из автозагрузки стартуют сразу, без искусственной паузы после входа.",
+        en: ("No startup delay", "Startup apps launch right away, without an artificial pause after sign-in."),
         cat: Perf,
         regs: &[Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", "StartupDelayInMSec", D(0), None)],
         rec: true,
@@ -175,6 +201,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Визуальные эффекты на скорость",
         desc: "Отключает анимации окон, панели задач и сворачивания.",
+        en: ("Visual effects for performance", "Turns off window, taskbar and minimize animations."),
         cat: Perf,
         regs: &[
             Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", "VisualFXSetting", D(3), Some(D(0))),
@@ -187,6 +214,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить гибернацию",
         desc: "Освобождает на диске C: место размером с объём RAM (hiberfil.sys) и отключает быстрый запуск.",
+        en: ("Disable hibernation", "Frees disk space equal to your RAM (hiberfil.sys) and disables Fast Startup."),
         cat: Perf,
         apply: "powercfg -h off",
         revert: "powercfg -h on",
@@ -196,6 +224,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Не отключать USB и PCIe для экономии",
         desc: "Отключает Selective Suspend и Link State Power Management. Убирает микрозависания мыши и звука.",
+        en: ("Keep USB and PCIe powered", "Disables USB Selective Suspend and Link State Power Management. Fixes mouse and audio micro-stutters."),
         cat: Perf,
         apply: "powercfg -setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0; powercfg -setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0; powercfg -setactive SCHEME_CURRENT",
         revert: "powercfg -setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1; powercfg -setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1; powercfg -setactive SCHEME_CURRENT",
@@ -206,6 +235,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Минимальное состояние CPU 100%",
         desc: "Процессор всегда на максимальной частоте от сети. Больше нагрев, зато нет просадок при разгоне частоты.",
+        en: ("Minimum CPU state 100%", "The CPU always runs at full clock on AC power. More heat, but no ramp-up dips."),
         cat: Perf,
         apply: "powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 100; powercfg -setactive SCHEME_CURRENT",
         revert: "powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PROCTHROTTLEMIN 5; powercfg -setactive SCHEME_CURRENT",
@@ -216,6 +246,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Core Parking",
         desc: "Все ядра CPU остаются активными, без «парковки» и задержек на пробуждение.",
+        en: ("Disable core parking", "All CPU cores stay active, with no parking and wake-up delays."),
         cat: Perf,
         apply: "powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 100; powercfg -setactive SCHEME_CURRENT",
         revert: "powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 10; powercfg -setactive SCHEME_CURRENT",
@@ -226,6 +257,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "NTFS: не обновлять время доступа",
         desc: "Меньше лишних записей на диск при каждом чтении файла.",
+        en: ("NTFS: no last-access updates", "Fewer extra disk writes every time a file is read."),
         cat: Perf,
         regs: &[Reg(FS, "NtfsDisableLastAccessUpdate", D(0x80000001), Some(D(0x80000002)))],
         rec: true,
@@ -234,6 +266,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "NTFS: без коротких имён 8.3",
         desc: "Ускоряет работу с папками, где много файлов.",
+        en: ("NTFS: no 8.3 short names", "Faster work with folders that contain many files."),
         cat: Perf,
         regs: &[Reg(FS, "NtfsDisable8dot3NameCreation", D(1), Some(D(2)))],
         rec: true,
@@ -242,6 +275,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Больший кэш файловой системы NTFS",
         desc: "NtfsMemoryUsage = 2: больше памяти под пул метаданных NTFS.",
+        en: ("Larger NTFS cache", "NtfsMemoryUsage = 2: more memory for the NTFS metadata pool."),
         cat: Perf,
         regs: &[Reg(FS, "NtfsMemoryUsage", D(2), None)],
         reboot: true,
@@ -250,6 +284,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить индексацию поиска",
         desc: "Останавливает службу Windows Search. Меньше нагрузка на диск и CPU, но поиск в «Пуске» станет медленнее.",
+        en: ("Disable search indexing", "Stops the Windows Search service. Less disk and CPU load, but Start menu search gets slower."),
         cat: Perf,
         apply: "SvcOff WSearch",
         revert: "SvcOn WSearch Automatic; Start-Service WSearch -EA SilentlyContinue",
@@ -261,6 +296,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить фоновые приложения",
         desc: "UWP-приложения не работают в фоне. В Windows 11 может сломать переключение языка, уведомления и поиск.",
+        en: ("Disable background apps", "UWP apps stop running in the background. On Windows 11 this can break input language switching, notifications and search."),
         cat: Memory,
         regs: &[
             Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", D(1), Some(D(0))),
@@ -272,6 +308,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить SysMain (Superfetch)",
         desc: "На SSD предзагрузка программ в RAM почти не нужна. Освобождает память и снимает нагрузку на диск.",
+        en: ("Disable SysMain (Superfetch)", "On an SSD, preloading apps into RAM is barely needed. Frees memory and disk activity."),
         cat: Memory,
         apply: "SvcOff SysMain",
         revert: "SvcOn SysMain Automatic; Start-Service SysMain -EA SilentlyContinue",
@@ -282,6 +319,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить сжатие памяти",
         desc: "Убирает нагрузку на CPU от сжатия RAM. Только для ПК с 16 ГБ памяти и больше.",
+        en: ("Disable memory compression", "Removes CPU load from RAM compression. Only for PCs with 16 GB of RAM or more."),
         cat: Memory,
         apply: "Disable-MMAgent -MemoryCompression",
         revert: "Enable-MMAgent -MemoryCompression",
@@ -293,6 +331,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Ядро всегда в RAM",
         desc: "DisablePagingExecutive: драйверы и ядро не уходят в файл подкачки.",
+        en: ("Keep the kernel in RAM", "DisablePagingExecutive: drivers and the kernel are never paged out to disk."),
         cat: Memory,
         regs: &[Reg(MEMMGMT, "DisablePagingExecutive", D(1), Some(D(0)))],
         reboot: true,
@@ -301,6 +340,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить предзагрузку Edge",
         desc: "Edge перестаёт держать процессы в памяти после закрытия и при старте Windows.",
+        en: ("Disable Edge preloading", "Edge no longer keeps processes in memory after closing or at Windows startup."),
         cat: Memory,
         regs: &[
             Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled", D(0), None),
@@ -312,6 +352,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить фоновый режим Chrome",
         desc: "Chrome не остаётся в памяти после закрытия последнего окна.",
+        en: ("Disable Chrome background mode", "Chrome no longer stays in memory after you close the last window."),
         cat: Memory,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled", D(0), None)],
         rec: true,
@@ -320,6 +361,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить виджеты",
         desc: "Убирает панель «Новости и интересы» и её процесс WebView (~150–300 МБ RAM).",
+        en: ("Disable widgets", "Removes the News and Interests panel and its WebView process (~150–300 MB of RAM)."),
         cat: Memory,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Dsh", "AllowNewsAndInterests", D(0), None)],
         rec: true,
@@ -328,6 +370,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Copilot",
         desc: "Убирает Windows Copilot и его фоновый процесс.",
+        en: ("Disable Copilot", "Removes Windows Copilot and its background process."),
         cat: Memory,
         regs: &[
             Reg(r"HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot", D(1), None),
@@ -339,6 +382,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Teams в автозагрузке",
         desc: "Встроенный чат Teams не запускается вместе с Windows.",
+        en: ("Disable Teams autostart", "The built-in Teams chat no longer starts with Windows."),
         cat: Memory,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Chat", "ChatIcon", D(3), None)],
         rec: true,
@@ -347,8 +391,9 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Разделять svchost реже",
         desc: "Объединяет службы в меньшее число процессов svchost, это экономит RAM. Порог задаётся по объёму памяти.",
+        en: ("Fewer svchost processes", "Groups services into fewer svchost processes to save RAM. The threshold is set from your RAM size."),
         cat: Memory,
-        apply: r#"$kb = [math]::Round((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1KB); Reg 'HKLM:\SYSTEM\CurrentControlSet\Control' 'SvcHostSplitThresholdInKB' $kb; "Порог: $kb КБ""#,
+        apply: r#"$kb = [math]::Round((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1KB); Reg 'HKLM:\SYSTEM\CurrentControlSet\Control' 'SvcHostSplitThresholdInKB' $kb; (T "Порог: $kb КБ" "Threshold: $kb KB")"#,
         revert: r"Reg 'HKLM:\SYSTEM\CurrentControlSet\Control' 'SvcHostSplitThresholdInKB' 0x380000",
         check: r"(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control').SvcHostSplitThresholdInKB -gt 0x380000",
         reboot: true,
@@ -358,6 +403,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Приоритет игр в планировщике MMCSS",
         desc: "Задачам «Games» выдаётся высокий приоритет CPU, GPU и ввода-вывода.",
+        en: ("Game priority in MMCSS", "Tasks in the Games profile get high CPU, GPU and I/O priority."),
         cat: Games,
         regs: &[
             Reg(GAMES, "GPU Priority", D(8), Some(D(8))),
@@ -372,6 +418,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Game DVR и запись в фоне",
         desc: "Xbox Game Bar перестаёт постоянно записывать экран. Это снимает нагрузку с GPU.",
+        en: ("Disable Game DVR and background recording", "Xbox Game Bar stops constantly recording the screen, which frees the GPU."),
         cat: Games,
         regs: &[
             Reg(GCS, "GameDVR_Enabled", D(0), Some(D(1))),
@@ -385,6 +432,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Игровой режим Windows",
         desc: "Включает Game Mode: игра получает приоритет, обновления не ставятся во время игры.",
+        en: ("Windows Game Mode", "Turns on Game Mode: games get priority and updates do not install while you play."),
         cat: Games,
         regs: &[
             Reg(r"HKCU:\Software\Microsoft\GameBar", "AutoGameModeEnabled", D(1), Some(D(0))),
@@ -397,6 +445,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить оптимизации полноэкранного режима",
         desc: "Глобально отключает FSO: настоящий эксклюзивный полноэкранный режим и меньше задержка ввода.",
+        en: ("Disable fullscreen optimizations", "Turns off FSO globally: true exclusive fullscreen and lower input latency."),
         cat: Games,
         regs: &[
             Reg(GCS, "GameDVR_FSEBehaviorMode", D(2), None),
@@ -410,6 +459,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить ускорение мыши",
         desc: "Убирает «повышенную точность указателя»: движение мыши 1:1, как нужно в шутерах.",
+        en: ("Disable mouse acceleration", "Turns off Enhance pointer precision: 1:1 mouse movement, as shooters need."),
         cat: Games,
         regs: &[
             Reg(r"HKCU:\Control Panel\Mouse", "MouseSpeed", S("0"), Some(S("1"))),
@@ -422,6 +472,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Быстрый повтор клавиш",
         desc: "Минимальная задержка перед автоповтором нажатой клавиши.",
+        en: ("Fast key repeat", "Minimal delay before a held key starts repeating."),
         cat: Games,
         regs: &[
             Reg(r"HKCU:\Control Panel\Keyboard", "KeyboardDelay", S("0"), Some(S("1"))),
@@ -433,6 +484,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без окна залипания клавиш",
         desc: "Пятикратное нажатие Shift в игре больше не открывает окно залипания клавиш.",
+        en: ("No Sticky Keys popup", "Pressing Shift five times in a game no longer opens the Sticky Keys dialog."),
         cat: Games,
         regs: &[
             Reg(r"HKCU:\Control Panel\Accessibility\StickyKeys", "Flags", S("506"), Some(S("510"))),
@@ -446,6 +498,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Глобальное разрешение таймера",
         desc: "В Windows 11 запрос высокой точности таймера от игры снова действует на всю систему. Стабильнее frametime.",
+        en: ("Global timer resolution", "On Windows 11 a game's high-resolution timer request applies system-wide again. Steadier frame times."),
         cat: Games,
         regs: &[Reg(r"HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", D(1), None)],
         game: true,
@@ -455,6 +508,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить dynamic tick",
         desc: "Таймер ядра тикает равномерно. Меньше джиттер, но выше энергопотребление ноутбука.",
+        en: ("Disable dynamic tick", "The kernel timer ticks evenly. Less jitter, but higher laptop power draw."),
         cat: Games,
         apply: "bcdedit /set disabledynamictick yes",
         revert: "bcdedit /deletevalue disabledynamictick",
@@ -466,6 +520,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить VBS / изоляцию ядра",
         desc: "Virtualization-Based Security съедает 5–25% FPS. Отключение снижает защиту от эксплойтов ядра.",
+        en: ("Disable VBS / Core Isolation", "Virtualization-Based Security costs 5–25% FPS. Disabling it weakens protection against kernel exploits."),
         cat: Games,
         regs: &[
             Reg(r"HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity", D(0), None),
@@ -478,6 +533,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Высокий приоритет для GPU-драйверов (MSI mode)",
         desc: "Переводит видеокарту на прерывания MSI: меньше задержка DPC. Поддерживают почти все GPU последних 10 лет.",
+        en: ("MSI interrupts for the GPU", "Switches the graphics card to MSI interrupts for lower DPC latency. Supported by nearly every GPU from the last 10 years."),
         cat: Games,
         apply: r#"Get-PnpDevice -Class Display -PresentOnly | % { $p = "HKLM:\SYSTEM\CurrentControlSet\Enum\$($_.InstanceId)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"; Reg $p 'MSISupported' 1; "MSI: $($_.FriendlyName)" }"#,
         revert: r#"Get-PnpDevice -Class Display -PresentOnly | % { Unreg "HKLM:\SYSTEM\CurrentControlSet\Enum\$($_.InstanceId)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties" 'MSISupported' }"#,
@@ -490,6 +546,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Снять ограничение сети для мультимедиа",
         desc: "NetworkThrottlingIndex = FFFFFFFF: Windows не режет пропускную способность во время воспроизведения.",
+        en: ("Remove multimedia network throttling", "NetworkThrottlingIndex = FFFFFFFF: Windows stops limiting bandwidth during playback."),
         cat: Network,
         regs: &[Reg(MM, "NetworkThrottlingIndex", D(0xFFFFFFFF), Some(D(10)))],
         rec: true,
@@ -499,6 +556,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить алгоритм Nagle",
         desc: "TCPNoDelay и TcpAckFrequency на всех адаптерах: пакеты уходят сразу. Ниже пинг в онлайн-играх.",
+        en: ("Disable Nagle's algorithm", "TCPNoDelay and TcpAckFrequency on every adapter: packets are sent immediately. Lower ping in online games."),
         cat: Network,
         apply: r"Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | % { Reg $_.PSPath 'TcpAckFrequency' 1; Reg $_.PSPath 'TCPNoDelay' 1 }",
         revert: r"Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | % { Unreg $_.PSPath 'TcpAckFrequency'; Unreg $_.PSPath 'TCPNoDelay' }",
@@ -509,6 +567,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить P2P-раздачу обновлений",
         desc: "Delivery Optimization не раздаёт обновления другим ПК через ваш интернет.",
+        en: ("Disable P2P update sharing", "Delivery Optimization stops uploading updates to other PCs over your connection."),
         cat: Network,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", D(0), None)],
         rec: true,
@@ -517,6 +576,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Не резервировать 20% канала под QoS",
         desc: "NonBestEffortLimit = 0: весь канал доступен приложениям.",
+        en: ("Don't reserve 20% bandwidth for QoS", "NonBestEffortLimit = 0: the whole link is available to apps."),
         cat: Network,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit", D(0), None)],
         rec: true,
@@ -525,6 +585,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "DNS Cloudflare 1.1.1.1",
         desc: "Быстрый DNS на всех активных адаптерах. Откат возвращает DNS от провайдера (DHCP).",
+        en: ("Cloudflare DNS 1.1.1.1", "Fast DNS on all active adapters. Reverting restores your provider's DNS (DHCP)."),
         cat: Network,
         apply: "Get-NetAdapter | ? Status -eq 'Up' | Set-DnsClientServerAddress -ServerAddresses 1.1.1.1,1.0.0.1; Clear-DnsClientCache",
         revert: "Get-NetAdapter | % { Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses }",
@@ -534,6 +595,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "TCP: автонастройка окна и RSS",
         desc: "Окно приёма подстраивается под канал, обработка пакетов распределяется по ядрам.",
+        en: ("TCP: window auto-tuning and RSS", "The receive window adapts to your link, and packet processing is spread across cores."),
         cat: Network,
         apply: "netsh int tcp set global autotuninglevel=normal; netsh int tcp set global rss=enabled; netsh int tcp set global ecncapability=enabled",
         revert: "netsh int tcp set global ecncapability=default",
@@ -544,6 +606,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Больше одновременных соединений",
         desc: "Увеличивает лимиты DNS-кэша и разрешает больше быстрых подключений.",
+        en: ("More concurrent connections", "Raises DNS cache limits and allows more fast connections."),
         cat: Network,
         regs: &[
             Reg(r"HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters", "NegativeCacheTime", D(0), None),
@@ -557,14 +620,16 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Сбросить сетевой стек",
         desc: "Winsock, TCP/IP, DNS-кэш и обновление IP-адреса. Помогает при глюках интернета.",
+        en: ("Reset network stack", "Winsock, TCP/IP, DNS cache and IP renewal. Helps when the internet misbehaves."),
         cat: Network,
-        apply: "netsh winsock reset; netsh int ip reset; ipconfig /flushdns; ipconfig /release | Out-Null; ipconfig /renew | Out-Null; 'Готово. Перезагрузите ПК.'",
+        apply: "netsh winsock reset; netsh int ip reset; ipconfig /flushdns; ipconfig /release | Out-Null; ipconfig /renew | Out-Null; (T 'Готово. Перезагрузите ПК.' 'Done. Restart your PC.')",
         ..T
     },
     // ───────────── Приватность ─────────────
     Tweak {
         name: "Отключить телеметрию",
         desc: "Минимальный уровень диагностики и отключение служб DiagTrack и dmwappushservice.",
+        en: ("Disable telemetry", "Minimum diagnostic level and the DiagTrack and dmwappushservice services turned off."),
         cat: Privacy,
         regs: &[
             Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", D(0), None),
@@ -578,6 +643,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить рекламный идентификатор",
         desc: "Приложения не получают ID для персонализированной рекламы.",
+        en: ("Disable advertising ID", "Apps no longer get an ID for personalized ads."),
         cat: Privacy,
         regs: &[Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", D(0), Some(D(1)))],
         rec: true,
@@ -586,6 +652,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить историю активности",
         desc: "Windows не собирает и не отправляет историю открытых программ и файлов.",
+        en: ("Disable activity history", "Windows stops collecting and uploading the history of your apps and files."),
         cat: Privacy,
         regs: &[
             Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\System", "EnableActivityFeed", D(0), None),
@@ -598,6 +665,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Recall",
         desc: "Запрещает Windows AI делать снимки экрана для «Воспоминаний».",
+        en: ("Disable Recall", "Prevents Windows AI from taking screenshots for Recall."),
         cat: Privacy,
         regs: &[
             Reg(r"HKCU:\Software\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis", D(1), None),
@@ -609,6 +677,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без рекламы и предложений Windows",
         desc: "Убирает рекомендации в «Пуске», тихую установку приложений, советы и «интересное» на экране блокировки.",
+        en: ("No Windows ads and suggestions", "Removes Start menu recommendations, silent app installs, tips and lock screen 'fun facts'."),
         cat: Privacy,
         regs: &[
             Reg(CDM, "SystemPaneSuggestionsEnabled", D(0), Some(D(1))),
@@ -627,6 +696,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без Bing в поиске «Пуска»",
         desc: "Поиск ищет только на компьютере. Быстрее и без отправки запросов в интернет.",
+        en: ("No Bing in Start search", "Search looks only on your PC. Faster, and your queries are not sent online."),
         cat: Privacy,
         regs: &[
             Reg(r"HKCU:\Software\Policies\Microsoft\Windows\Explorer", "DisableSearchBoxSuggestions", D(1), None),
@@ -638,6 +708,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить персонализированный опыт",
         desc: "Microsoft не использует диагностические данные для советов и рекламы.",
+        en: ("Disable tailored experiences", "Microsoft does not use diagnostic data for tips and ads."),
         cat: Privacy,
         regs: &[Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy", "TailoredExperiencesWithDiagnosticDataEnabled", D(0), Some(D(1)))],
         rec: true,
@@ -646,6 +717,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить запросы отзывов",
         desc: "Windows больше не спрашивает «Как вам Windows?».",
+        en: ("Disable feedback requests", "Windows stops asking how you like Windows."),
         cat: Privacy,
         regs: &[Reg(r"HKCU:\Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod", D(0), None)],
         rec: true,
@@ -654,6 +726,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить отчёты об ошибках",
         desc: "Windows Error Reporting не собирает дампы и не отправляет их.",
+        en: ("Disable error reporting", "Windows Error Reporting stops collecting and uploading dumps."),
         cat: Privacy,
         regs: &[Reg(r"HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting", "Disabled", D(1), Some(D(0)))],
         apply: "SvcOff WerSvc",
@@ -663,6 +736,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Cortana",
         desc: "Запрещает Cortana политикой.",
+        en: ("Disable Cortana", "Turns Cortana off by policy."),
         cat: Privacy,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana", D(0), None)],
         rec: true,
@@ -671,6 +745,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить сбор ввода с клавиатуры",
         desc: "Windows не отправляет образцы рукописного и клавиатурного ввода.",
+        en: ("Disable typing data collection", "Windows stops sending handwriting and typing samples."),
         cat: Privacy,
         regs: &[
             Reg(r"HKCU:\Software\Microsoft\InputPersonalization", "RestrictImplicitTextCollection", D(1), Some(D(0))),
@@ -683,6 +758,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить задания телеметрии",
         desc: "Отключает задания планировщика: Compatibility Appraiser, CEIP, сбор данных о дисках.",
+        en: ("Disable telemetry tasks", "Disables scheduled tasks: Compatibility Appraiser, CEIP and disk diagnostics collection."),
         cat: Privacy,
         apply: r#"'\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser','\Microsoft\Windows\Application Experience\ProgramDataUpdater','\Microsoft\Windows\Customer Experience Improvement Program\Consolidator','\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip','\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector' | % { $n = Split-Path $_ -Leaf; $p = (Split-Path $_) + '\'; Disable-ScheduledTask -TaskPath $p -TaskName $n -EA SilentlyContinue | Out-Null; "  − $n" }"#,
         revert: r"'\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser','\Microsoft\Windows\Application Experience\ProgramDataUpdater','\Microsoft\Windows\Customer Experience Improvement Program\Consolidator','\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip','\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector' | % { Enable-ScheduledTask -TaskPath ((Split-Path $_) + '\') -TaskName (Split-Path $_ -Leaf) -EA SilentlyContinue | Out-Null }",
@@ -694,6 +770,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Ускорить запуск PowerShell (NGen)",
         desc: "Компилирует сборки .NET, которые грузит PowerShell, в машинный код. Запуск становится в 2–5 раз быстрее.",
+        en: ("Speed up PowerShell startup (NGen)", "Compiles the .NET assemblies PowerShell loads into native code. Startup becomes 2–5 times faster."),
         cat: PowerShell,
         apply: r#"$ngen = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'ngen.exe'; [AppDomain]::CurrentDomain.GetAssemblies() | ? { $_.Location } | % { & $ngen install $_.Location /nologo | Out-Null; "  ✓ $(Split-Path $_.Location -Leaf)" }"#,
         rec: true,
@@ -702,6 +779,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить телеметрию PowerShell",
         desc: "POWERSHELL_TELEMETRY_OPTOUT = 1 для всех версий PowerShell 7.",
+        en: ("Disable PowerShell telemetry", "POWERSHELL_TELEMETRY_OPTOUT = 1 for all PowerShell 7 versions."),
         cat: PowerShell,
         regs: &[Reg(ENV, "POWERSHELL_TELEMETRY_OPTOUT", S("1"), None)],
         rec: true,
@@ -710,6 +788,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без проверки обновлений PowerShell",
         desc: "PowerShell 7 при запуске не ходит в сеть проверять новую версию.",
+        en: ("No PowerShell update check", "PowerShell 7 no longer goes online to check for a new version at startup."),
         cat: PowerShell,
         regs: &[Reg(ENV, "POWERSHELL_UPDATECHECK", S("Off"), None)],
         rec: true,
@@ -718,6 +797,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без телеметрии .NET CLI",
         desc: "DOTNET_CLI_TELEMETRY_OPTOUT = 1.",
+        en: ("No .NET CLI telemetry", "DOTNET_CLI_TELEMETRY_OPTOUT = 1."),
         cat: PowerShell,
         regs: &[Reg(ENV, "DOTNET_CLI_TELEMETRY_OPTOUT", S("1"), None)],
         rec: true,
@@ -726,6 +806,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Разрешить локальные скрипты (RemoteSigned)",
         desc: "Можно запускать свои .ps1. Скрипты из интернета по-прежнему требуют подписи.",
+        en: ("Allow local scripts (RemoteSigned)", "You can run your own .ps1 files. Scripts from the internet still need a signature."),
         cat: PowerShell,
         apply: "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force",
         revert: "Set-ExecutionPolicy Undefined -Scope CurrentUser -Force",
@@ -735,8 +816,9 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить PowerShell 2.0",
         desc: "Старый движок без защиты AMSI часто используют для атак. Безопасно удалить.",
+        en: ("Disable PowerShell 2.0", "The old engine without AMSI protection is often abused in attacks. Safe to remove."),
         cat: PowerShell,
-        apply: "Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart | Out-Null; 'PowerShell 2.0 отключён'",
+        apply: "Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart | Out-Null; (T 'PowerShell 2.0 отключён' 'PowerShell 2.0 disabled')",
         revert: "Enable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -NoRestart | Out-Null",
         check: "(Get-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2Root -EA SilentlyContinue).State -ne 'Enabled'",
         rec: true,
@@ -745,6 +827,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Журнал блоков скриптов",
         desc: "Script Block Logging: все выполненные PowerShell-скрипты пишутся в журнал событий. Полезно для безопасности.",
+        en: ("Script block logging", "Every PowerShell script that runs is written to the event log. Useful for security."),
         cat: PowerShell,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging", "EnableScriptBlockLogging", D(1), None)],
         ..T
@@ -752,6 +835,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Установить/обновить PowerShell 7",
         desc: "Ставит последнюю версию PowerShell 7 через winget.",
+        en: ("Install / update PowerShell 7", "Installs the latest PowerShell 7 with winget."),
         cat: PowerShell,
         apply: "winget install --id Microsoft.PowerShell -e --accept-source-agreements --accept-package-agreements --silent",
         ..T
@@ -759,14 +843,16 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Обновить PSReadLine",
         desc: "Свежий PSReadLine: подсказки по истории, подсветка синтаксиса, быстрее ввод.",
+        en: ("Update PSReadLine", "Fresh PSReadLine: history suggestions, syntax highlighting, faster typing."),
         cat: PowerShell,
-        apply: "Install-PackageProvider NuGet -Force -Scope CurrentUser | Out-Null; Install-Module PSReadLine -Force -Scope CurrentUser -AllowClobber -SkipPublisherCheck; 'PSReadLine обновлён'",
+        apply: "Install-PackageProvider NuGet -Force -Scope CurrentUser | Out-Null; Install-Module PSReadLine -Force -Scope CurrentUser -AllowClobber -SkipPublisherCheck; (T 'PSReadLine обновлён' 'PSReadLine updated')",
         ..T
     },
     // ───────────── Интерфейс ─────────────
     Tweak {
         name: "Классическое контекстное меню",
         desc: "В Windows 11 полное меню по правому клику открывается сразу, без «Показать дополнительные параметры».",
+        en: ("Classic context menu", "On Windows 11 the full right-click menu opens right away, without 'Show more options'."),
         cat: Interface,
         apply: r"New-Item 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32' -Force -Value '' | Out-Null; RestartExplorer",
         revert: r"Remove-Item 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}' -Recurse -Force; RestartExplorer",
@@ -777,6 +863,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Показывать расширения файлов",
         desc: "Видно, что «фото.jpg.exe» — это программа. Удобно и безопаснее.",
+        en: ("Show file extensions", "You can see that 'photo.jpg.exe' is a program. Handier and safer."),
         cat: Interface,
         regs: &[Reg(ADV, "HideFileExt", D(0), Some(D(1)))],
         rec: true,
@@ -785,6 +872,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Показывать скрытые файлы",
         desc: "Explorer показывает скрытые файлы и папки.",
+        en: ("Show hidden files", "File Explorer shows hidden files and folders."),
         cat: Interface,
         regs: &[Reg(ADV, "Hidden", D(1), Some(D(2)))],
         ..T
@@ -792,6 +880,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Explorer открывает «Этот компьютер»",
         desc: "Вместо «Главной» с недавними файлами.",
+        en: ("Explorer opens This PC", "Instead of Home with recent files."),
         cat: Interface,
         regs: &[Reg(ADV, "LaunchTo", D(1), None)],
         ..T
@@ -799,6 +888,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Тёмная тема системы",
         desc: "Тёмная тема для Windows и приложений.",
+        en: ("System dark mode", "Dark theme for Windows and apps."),
         cat: Interface,
         regs: &[Reg(PERS, "AppsUseLightTheme", D(0), Some(D(1))), Reg(PERS, "SystemUsesLightTheme", D(0), Some(D(1)))],
         ..T
@@ -806,6 +896,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить прозрачность Windows",
         desc: "Меньше нагрузка на GPU от размытия в системном интерфейсе.",
+        en: ("Disable Windows transparency", "Less GPU load from blur in the system UI."),
         cat: Interface,
         regs: &[Reg(PERS, "EnableTransparency", D(0), Some(D(1)))],
         ..T
@@ -813,6 +904,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Панель задач слева",
         desc: "Кнопка «Пуск» и значки слева, как в Windows 10.",
+        en: ("Left-aligned taskbar", "Start button and icons on the left, as in Windows 10."),
         cat: Interface,
         regs: &[Reg(ADV, "TaskbarAl", D(0), Some(D(1)))],
         ..T
@@ -820,6 +912,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "«Завершить задачу» на панели задач",
         desc: "Правый клик по значку на панели задач → «Завершить задачу». Убить зависшую игру одним кликом.",
+        en: ("End task on the taskbar", "Right-click a taskbar icon → End task. Kill a frozen game in one click."),
         cat: Interface,
         regs: &[Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings", "TaskbarEndTask", D(1), Some(D(0)))],
         rec: true,
@@ -828,6 +921,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Секунды в часах панели задач",
         desc: "Часы в трее показывают секунды.",
+        en: ("Seconds in the taskbar clock", "The tray clock shows seconds."),
         cat: Interface,
         regs: &[Reg(ADV, "ShowSecondsInSystemClock", D(1), Some(D(0)))],
         ..T
@@ -835,6 +929,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Убрать кнопку «Представление задач»",
         desc: "Скрывает кнопку Task View на панели задач.",
+        en: ("Hide the Task View button", "Hides the Task View button on the taskbar."),
         cat: Interface,
         regs: &[Reg(ADV, "ShowTaskViewButton", D(0), Some(D(1)))],
         ..T
@@ -842,6 +937,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Убрать поиск с панели задач",
         desc: "Скрывает поле поиска. Поиск по-прежнему открывается клавишей Win.",
+        en: ("Hide taskbar search", "Hides the search box. Search still opens with the Win key."),
         cat: Interface,
         regs: &[Reg(SEARCH, "SearchboxTaskbarMode", D(0), Some(D(2)))],
         ..T
@@ -849,6 +945,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить ярлык «- Ярлык»",
         desc: "Новые ярлыки создаются без приписки «- Ярлык».",
+        en: ("No '- Shortcut' suffix", "New shortcuts are created without the '- Shortcut' suffix."),
         cat: Interface,
         apply: r"Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer' 'link' ([byte[]](0,0,0,0)) Binary",
         revert: r"Unreg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer' 'link'",
@@ -858,6 +955,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Без экрана блокировки",
         desc: "Сразу экран ввода пароля, без картинки, которую надо смахивать.",
+        en: ("No lock screen", "Go straight to the sign-in screen, without a picture to swipe away."),
         cat: Interface,
         regs: &[Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen", D(1), None)],
         ..T
@@ -865,6 +963,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить залипание окон (Aero Shake)",
         desc: "Встряхивание окна больше не сворачивает остальные.",
+        en: ("Disable Aero Shake", "Shaking a window no longer minimizes the others."),
         cat: Interface,
         regs: &[Reg(ADV, "DisallowShaking", D(1), None)],
         ..T
@@ -872,6 +971,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Отключить Snap-подсказки",
         desc: "При прилипании окна к краю не появляется предложение разместить остальные окна.",
+        en: ("Disable Snap Assist", "Snapping a window to an edge no longer suggests arranging the others."),
         cat: Interface,
         regs: &[Reg(ADV, "SnapAssist", D(0), Some(D(1)))],
         ..T
@@ -879,6 +979,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Перезапустить Проводник",
         desc: "Применяет изменения интерфейса без перезагрузки.",
+        en: ("Restart File Explorer", "Applies interface changes without a reboot."),
         cat: Interface,
         apply: "RestartExplorer",
         ..T
@@ -887,6 +988,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Службы Xbox",
         desc: "Отключает XblAuthManager, XblGameSave, XboxNetApiSvc и XboxGipSvc. Не включайте, если играете через Xbox app или Game Pass.",
+        en: ("Xbox services", "Disables XblAuthManager, XblGameSave, XboxNetApiSvc and XboxGipSvc. Don't enable it if you use the Xbox app or Game Pass."),
         cat: Services,
         apply: "SvcOff XblAuthManager,XblGameSave,XboxNetApiSvc,XboxGipSvc",
         revert: "SvcOn XblAuthManager,XblGameSave,XboxNetApiSvc,XboxGipSvc Manual",
@@ -897,6 +999,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Диспетчер печати",
         desc: "Отключает Spooler. Включайте, только если у вас нет принтера.",
+        en: ("Print Spooler", "Disables Spooler. Only enable it if you have no printer."),
         cat: Services,
         apply: "SvcOff Spooler",
         revert: "SvcOn Spooler Automatic; Start-Service Spooler -EA SilentlyContinue",
@@ -907,6 +1010,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Факс и удалённый реестр",
         desc: "Fax, RemoteRegistry — почти никому не нужны.",
+        en: ("Fax and Remote Registry", "Fax and RemoteRegistry are almost never needed."),
         cat: Services,
         apply: "SvcOff Fax,RemoteRegistry",
         revert: "SvcOn Fax,RemoteRegistry Manual",
@@ -917,6 +1021,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Географическое положение и карты",
         desc: "Отключает lfsvc и MapsBroker (автообновление офлайн-карт).",
+        en: ("Location and maps", "Disables lfsvc and MapsBroker (offline map auto-updates)."),
         cat: Services,
         apply: "SvcOff lfsvc,MapsBroker",
         revert: "SvcOn lfsvc,MapsBroker Manual",
@@ -926,6 +1031,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Демо-режим и телефон",
         desc: "RetailDemo, PhoneSvc — демо-режим для магазинов и телефония.",
+        en: ("Retail demo and phone", "RetailDemo and PhoneSvc: store demo mode and telephony."),
         cat: Services,
         apply: "SvcOff RetailDemo,PhoneSvc",
         revert: "SvcOn RetailDemo,PhoneSvc Manual",
@@ -936,6 +1042,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Служба биометрии",
         desc: "WbioSrvc. Не отключайте, если входите по отпечатку пальца или лицу (Windows Hello).",
+        en: ("Biometric service", "WbioSrvc. Don't disable it if you sign in with a fingerprint or face (Windows Hello)."),
         cat: Services,
         apply: "SvcOff WbioSrvc",
         revert: "SvcOn WbioSrvc Automatic",
@@ -946,6 +1053,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Беспроводная связь Bluetooth",
         desc: "Отключает bthserv и BTAGService. Не трогайте, если у вас Bluetooth-наушники или мышь.",
+        en: ("Bluetooth services", "Disables bthserv and BTAGService. Leave them alone if you use Bluetooth headphones or a mouse."),
         cat: Services,
         apply: "SvcOff bthserv,BTAGService",
         revert: "SvcOn bthserv,BTAGService Manual",
@@ -956,6 +1064,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Hyper-V гостевые службы",
         desc: "Службы интеграции Hyper-V нужны только внутри виртуальной машины.",
+        en: ("Hyper-V guest services", "Hyper-V integration services are only needed inside a virtual machine."),
         cat: Services,
         apply: "SvcOff vmickvpexchange,vmicguestinterface,vmicshutdown,vmicheartbeat,vmicvmsession,vmicrdv,vmictimesync,vmicvss",
         revert: "SvcOn vmickvpexchange,vmicguestinterface,vmicshutdown,vmicheartbeat,vmicvmsession,vmicrdv,vmictimesync,vmicvss Manual",
@@ -966,6 +1075,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Не перезагружать ПК после обновлений сам",
         desc: "Windows Update не перезагружает компьютер, пока вы в системе.",
+        en: ("No automatic restarts after updates", "Windows Update does not restart the PC while you are signed in."),
         cat: Services,
         regs: &[
             Reg(r"HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", D(1), None),
@@ -978,6 +1088,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Временные файлы",
         desc: "%TEMP% пользователя и C:\\Windows\\Temp.",
+        en: ("Temporary files", "Your %TEMP% and C:\\Windows\\Temp."),
         cat: Cleanup,
         apply: r#"Remove-Item "$env:TEMP\*","$env:windir\Temp\*" -Recurse -Force -EA SilentlyContinue"#,
         ..T
@@ -985,6 +1096,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Кэш Windows Update",
         desc: "Скачанные установщики обновлений из SoftwareDistribution\\Download.",
+        en: ("Windows Update cache", "Downloaded update installers in SoftwareDistribution\\Download."),
         cat: Cleanup,
         apply: r#"Stop-Service wuauserv,bits -Force -EA SilentlyContinue; Remove-Item "$env:windir\SoftwareDistribution\Download\*" -Recurse -Force -EA SilentlyContinue; Start-Service wuauserv,bits -EA SilentlyContinue"#,
         ..T
@@ -992,6 +1104,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Кэш Delivery Optimization",
         desc: "Файлы, накопленные для P2P-раздачи обновлений.",
+        en: ("Delivery Optimization cache", "Files kept for P2P update sharing."),
         cat: Cleanup,
         apply: "Delete-DeliveryOptimizationCache -Force -EA SilentlyContinue",
         ..T
@@ -999,6 +1112,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Корзина",
         desc: "Безвозвратно очищает корзину на всех дисках.",
+        en: ("Recycle Bin", "Permanently empties the Recycle Bin on all drives."),
         cat: Cleanup,
         apply: "Clear-RecycleBin -Force -EA SilentlyContinue",
         ..T
@@ -1006,6 +1120,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Кэш миниатюр",
         desc: "thumbcache_*.db. Windows пересоздаст миниатюры по мере просмотра.",
+        en: ("Thumbnail cache", "thumbcache_*.db. Windows recreates thumbnails as you browse."),
         cat: Cleanup,
         apply: r#"Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\thumbcache_*.db","$env:LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache_*.db" -Force -EA SilentlyContinue"#,
         ..T
@@ -1013,6 +1128,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Дампы сбоев и отчёты об ошибках",
         desc: "CrashDumps, Minidump, WER и memory.dmp.",
+        en: ("Crash dumps and error reports", "CrashDumps, Minidump, WER and memory.dmp."),
         cat: Cleanup,
         apply: r#"Remove-Item "$env:LOCALAPPDATA\CrashDumps\*","$env:ProgramData\Microsoft\Windows\WER\ReportArchive\*","$env:ProgramData\Microsoft\Windows\WER\ReportQueue\*","$env:windir\Minidump\*","$env:windir\MEMORY.DMP" -Recurse -Force -EA SilentlyContinue"#,
         ..T
@@ -1020,6 +1136,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Кэш браузеров",
         desc: "Кэш Chrome, Edge, Brave, Яндекс.Браузера и Firefox. Пароли, история и вкладки не затрагиваются.",
+        en: ("Browser caches", "Chrome, Edge, Brave, Yandex Browser and Firefox cache. Passwords, history and tabs are untouched."),
         cat: Cleanup,
         apply: r#"$roots = "$env:LOCALAPPDATA\Google\Chrome\User Data","$env:LOCALAPPDATA\Microsoft\Edge\User Data","$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data","$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data"; foreach ($r in $roots) { Get-ChildItem $r -Directory -EA SilentlyContinue | % { Remove-Item "$($_.FullName)\Cache\*","$($_.FullName)\Code Cache\*","$($_.FullName)\GPUCache\*" -Recurse -Force -EA SilentlyContinue } }; Remove-Item "$env:LOCALAPPDATA\Mozilla\Firefox\Profiles\*\cache2\*" -Recurse -Force -EA SilentlyContinue"#,
         ..T
@@ -1027,6 +1144,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Кэш шейдеров DirectX и видеодрайверов",
         desc: "D3DSCache, NVIDIA DXCache/GLCache, AMD DxCache. Игры пересоберут шейдеры при первом запуске.",
+        en: ("DirectX and GPU driver shader cache", "D3DSCache, NVIDIA DXCache/GLCache, AMD DxCache. Games rebuild shaders on first launch."),
         cat: Cleanup,
         apply: r#"Remove-Item "$env:LOCALAPPDATA\D3DSCache\*","$env:LOCALAPPDATA\NVIDIA\DXCache\*","$env:LOCALAPPDATA\NVIDIA\GLCache\*","$env:LOCALAPPDATA\AMD\DxCache\*","$env:LOCALAPPDATA\AMD\GLCache\*" -Recurse -Force -EA SilentlyContinue"#,
         ..T
@@ -1034,20 +1152,23 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Кэш DNS",
         desc: "Сбрасывает кэш DNS-имён.",
+        en: ("DNS cache", "Flushes the DNS name cache."),
         cat: Cleanup,
-        apply: "Clear-DnsClientCache; 'DNS-кэш очищен'",
+        apply: "Clear-DnsClientCache; (T 'DNS-кэш очищен' 'DNS cache flushed')",
         ..T
     },
     Tweak {
         name: "Журналы событий Windows",
         desc: "Очищает все журналы Event Viewer.",
+        en: ("Windows event logs", "Clears every Event Viewer log."),
         cat: Cleanup,
-        apply: "wevtutil el | % { wevtutil cl \"$_\" 2>$null }; 'Журналы очищены'",
+        apply: "wevtutil el | % { wevtutil cl \"$_\" 2>$null }; (T 'Журналы очищены' 'Logs cleared')",
         ..T
     },
     Tweak {
         name: "Старые точки восстановления и теневые копии",
         desc: "Удаляет все теневые копии, кроме самой свежей.",
+        en: ("Old restore points and shadow copies", "Deletes all shadow copies except the newest one."),
         cat: Cleanup,
         apply: "vssadmin delete shadows /for=C: /oldest /quiet",
         risk: true,
@@ -1056,6 +1177,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Хранилище компонентов WinSxS",
         desc: "DISM удаляет старые версии системных компонентов. Долго (5–15 мин), освобождает гигабайты.",
+        en: ("WinSxS component store", "DISM removes old versions of system components. Slow (5–15 min), frees gigabytes."),
         cat: Cleanup,
         apply: "Dism.exe /Online /Cleanup-Image /StartComponentCleanup /NoRestart",
         ..T
@@ -1064,34 +1186,39 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Найти обновления драйверов",
         desc: "Ищет новые драйверы через Windows Update для всех устройств.",
+        en: ("Find driver updates", "Looks for new drivers for every device via Windows Update."),
         cat: Drivers,
-        apply: r#"'Поиск драйверов в Windows Update…'; $s = New-Object -ComObject Microsoft.Update.Session; $r = $s.CreateUpdateSearcher().Search("IsInstalled=0 and Type='Driver'"); if ($r.Updates.Count -eq 0) { '✓ Все драйверы актуальны' } else { "Найдено обновлений: $($r.Updates.Count)"; foreach ($u in $r.Updates) { "  • $($u.Title)" } }"#,
+        apply: r#"(T 'Поиск драйверов в Windows Update…' 'Searching Windows Update for drivers…'); $s = New-Object -ComObject Microsoft.Update.Session; $r = $s.CreateUpdateSearcher().Search("IsInstalled=0 and Type='Driver'"); if ($r.Updates.Count -eq 0) { (T '✓ Все драйверы актуальны' '✓ All drivers are up to date') } else { (T "Найдено обновлений: $($r.Updates.Count)" "Updates found: $($r.Updates.Count)"); foreach ($u in $r.Updates) { "  • $($u.Title)" } }"#,
         ..T
     },
     Tweak {
         name: "Установить все обновления драйверов",
         desc: "Скачивает и ставит все найденные драйверы. Перед этим создаётся точка восстановления.",
+        en: ("Install all driver updates", "Downloads and installs every driver found. A restore point is created first."),
         cat: Drivers,
-        apply: r#"RestorePoint 'SparkTweak: драйверы'; $s = New-Object -ComObject Microsoft.Update.Session; $r = $s.CreateUpdateSearcher().Search("IsInstalled=0 and Type='Driver'"); if ($r.Updates.Count -eq 0) { '✓ Все драйверы актуальны'; return }; $c = New-Object -ComObject Microsoft.Update.UpdateColl; foreach ($u in $r.Updates) { if (-not $u.EulaAccepted) { $u.AcceptEula() }; [void]$c.Add($u); "  • $($u.Title)" }; 'Загрузка…'; $d = $s.CreateUpdateDownloader(); $d.Updates = $c; [void]$d.Download(); 'Установка…'; $i = $s.CreateUpdateInstaller(); $i.Updates = $c; $res = $i.Install(); "✓ Готово (код $($res.ResultCode))"; if ($res.RebootRequired) { '⟳ Требуется перезагрузка' }"#,
+        apply: r#"RestorePoint 'SparkTweak: drivers'; $s = New-Object -ComObject Microsoft.Update.Session; $r = $s.CreateUpdateSearcher().Search("IsInstalled=0 and Type='Driver'"); if ($r.Updates.Count -eq 0) { (T '✓ Все драйверы актуальны' '✓ All drivers are up to date'); return }; $c = New-Object -ComObject Microsoft.Update.UpdateColl; foreach ($u in $r.Updates) { if (-not $u.EulaAccepted) { $u.AcceptEula() }; [void]$c.Add($u); "  • $($u.Title)" }; (T 'Загрузка…' 'Downloading…'); $d = $s.CreateUpdateDownloader(); $d.Updates = $c; [void]$d.Download(); (T 'Установка…' 'Installing…'); $i = $s.CreateUpdateInstaller(); $i.Updates = $c; $res = $i.Install(); (T "✓ Готово (код $($res.ResultCode))" "✓ Done (code $($res.ResultCode))"); if ($res.RebootRequired) { (T '⟳ Требуется перезагрузка' '⟳ Restart required') }"#,
         ..T
     },
     Tweak {
         name: "Резервная копия всех драйверов",
         desc: "Экспортирует сторонние драйверы в папку SparkTweak_Drivers на рабочем столе. Пригодится после переустановки Windows.",
+        en: ("Back up all drivers", "Exports third-party drivers to a SparkTweak_Drivers folder on your desktop. Handy after reinstalling Windows."),
         cat: Drivers,
-        apply: r#"$d = Join-Path ([Environment]::GetFolderPath('Desktop')) "SparkTweak_Drivers_$(Get-Date -f yyyy-MM-dd)"; New-Item $d -ItemType Directory -Force | Out-Null; pnputil /export-driver * "$d" | Select-Object -Last 2; "✓ Сохранено в $d""#,
+        apply: r#"$d = Join-Path ([Environment]::GetFolderPath('Desktop')) "SparkTweak_Drivers_$(Get-Date -f yyyy-MM-dd)"; New-Item $d -ItemType Directory -Force | Out-Null; pnputil /export-driver * "$d" | Select-Object -Last 2; (T "✓ Сохранено в $d" "✓ Saved to $d")"#,
         ..T
     },
     Tweak {
         name: "Список проблемных устройств",
         desc: "Показывает устройства без драйвера или с ошибкой.",
+        en: ("List problem devices", "Shows devices with no driver or with an error."),
         cat: Drivers,
-        apply: r#"$p = Get-PnpDevice -PresentOnly | ? { $_.Status -ne 'OK' }; if (!$p) { '✓ Проблемных устройств нет' } else { $p | % { "  ⚠ $($_.FriendlyName) [$($_.Status)] $($_.InstanceId)" } }"#,
+        apply: r#"$p = Get-PnpDevice -PresentOnly | ? { $_.Status -ne 'OK' }; if (!$p) { (T '✓ Проблемных устройств нет' '✓ No problem devices') } else { $p | % { "  ⚠ $($_.FriendlyName) [$($_.Status)] $($_.InstanceId)" } }"#,
         ..T
     },
     Tweak {
         name: "Обновить видеодрайвер (NVIDIA / AMD / Intel)",
         desc: "Ищет новую версию через winget и открывает официальную страницу драйвера.",
+        en: ("Update GPU driver (NVIDIA / AMD / Intel)", "Looks for a new version via winget and opens the official driver page."),
         cat: Drivers,
         apply: r#"$g = (Get-CimInstance Win32_VideoController).Name -join ' '; "GPU: $g"; if ($g -match 'NVIDIA') { Start-Process 'https://www.nvidia.com/ru-ru/drivers/' } elseif ($g -match 'AMD|Radeon') { Start-Process 'https://www.amd.com/ru/support/download/drivers.html' } elseif ($g -match 'Intel') { winget install --id Intel.IntelDriverAndSupportAssistant -e --accept-source-agreements --accept-package-agreements --silent }"#,
         ..T
@@ -1099,8 +1226,9 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Удалить старые версии драйверов",
         desc: "Убирает из хранилища драйверов устаревшие дубликаты, которые не используются.",
+        en: ("Remove old driver versions", "Removes unused outdated duplicates from the driver store."),
         cat: Drivers,
-        apply: r#"$list = pnputil /enum-drivers | Out-String; $blocks = $list -split '(\r?\n){2,}' | ? { $_ -match 'oem\d+\.inf' }; $d = foreach ($b in $blocks) { [pscustomobject]@{ Inf = [regex]::Match($b, 'oem\d+\.inf').Value; Orig = [regex]::Match($b, ':\s*((?!oem\d)\S+\.inf)', 'IgnoreCase').Groups[1].Value; Ver = [regex]::Match($b, '\d{1,4}[./-]\d{1,2}[./-]\d{1,4}\s+(\d+(\.\d+)+)').Groups[1].Value } }; $d | ? Orig | Group-Object Orig | ? Count -gt 1 | % { $_.Group | Sort-Object { try { [version]$_.Ver } catch { [version]'0.0' } } -Descending | Select-Object -Skip 1 | % { pnputil /delete-driver $_.Inf | Out-Null; "  − $($_.Inf) ($($_.Orig) $($_.Ver))" } }; '✓ Готово'"#,
+        apply: r#"$list = pnputil /enum-drivers | Out-String; $blocks = $list -split '(\r?\n){2,}' | ? { $_ -match 'oem\d+\.inf' }; $d = foreach ($b in $blocks) { [pscustomobject]@{ Inf = [regex]::Match($b, 'oem\d+\.inf').Value; Orig = [regex]::Match($b, ':\s*((?!oem\d)\S+\.inf)', 'IgnoreCase').Groups[1].Value; Ver = [regex]::Match($b, '\d{1,4}[./-]\d{1,2}[./-]\d{1,4}\s+(\d+(\.\d+)+)').Groups[1].Value } }; $d | ? Orig | Group-Object Orig | ? Count -gt 1 | % { $_.Group | Sort-Object { try { [version]$_.Ver } catch { [version]'0.0' } } -Descending | Select-Object -Skip 1 | % { pnputil /delete-driver $_.Inf | Out-Null; "  − $($_.Inf) ($($_.Orig) $($_.Ver))" } }; (T '✓ Готово' '✓ Done')"#,
         risk: true,
         ..T
     },
@@ -1108,20 +1236,23 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Создать точку восстановления",
         desc: "Снимок системы, к которому можно вернуться, если что-то пойдёт не так.",
+        en: ("Create a restore point", "A system snapshot you can return to if something goes wrong."),
         cat: System,
-        apply: "RestorePoint 'SparkTweak: вручную'",
+        apply: "RestorePoint 'SparkTweak: manual'",
         ..T
     },
     Tweak {
         name: "Резервная копия реестра",
         desc: "Экспортирует HKCU и HKLM\\SOFTWARE в .reg-файлы на рабочем столе.",
+        en: ("Back up the registry", "Exports HKCU and HKLM\\SOFTWARE to .reg files on your desktop."),
         cat: System,
-        apply: r#"$d = Join-Path ([Environment]::GetFolderPath('Desktop')) "SparkTweak_Registry_$(Get-Date -f yyyy-MM-dd_HH-mm)"; New-Item $d -ItemType Directory -Force | Out-Null; reg export HKCU "$d\HKCU.reg" /y | Out-Null; reg export HKLM\SOFTWARE "$d\HKLM_SOFTWARE.reg" /y | Out-Null; reg export HKLM\SYSTEM\CurrentControlSet "$d\HKLM_SYSTEM.reg" /y | Out-Null; "✓ Сохранено в $d""#,
+        apply: r#"$d = Join-Path ([Environment]::GetFolderPath('Desktop')) "SparkTweak_Registry_$(Get-Date -f yyyy-MM-dd_HH-mm)"; New-Item $d -ItemType Directory -Force | Out-Null; reg export HKCU "$d\HKCU.reg" /y | Out-Null; reg export HKLM\SOFTWARE "$d\HKLM_SOFTWARE.reg" /y | Out-Null; reg export HKLM\SYSTEM\CurrentControlSet "$d\HKLM_SYSTEM.reg" /y | Out-Null; (T "✓ Сохранено в $d" "✓ Saved to $d")"#,
         ..T
     },
     Tweak {
         name: "Проверка системных файлов (SFC)",
         desc: "sfc /scannow — находит и восстанавливает повреждённые файлы Windows.",
+        en: ("System File Checker (SFC)", "sfc /scannow finds and repairs damaged Windows files."),
         cat: System,
         apply: "sfc /scannow | % { $_ -replace \"`0\", '' } | ? { $_.Trim() }",
         ..T
@@ -1129,6 +1260,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Восстановление образа (DISM)",
         desc: "DISM /RestoreHealth чинит хранилище компонентов. Запускайте перед SFC, если SFC не помогает.",
+        en: ("Repair Windows image (DISM)", "DISM /RestoreHealth repairs the component store. Run it before SFC if SFC doesn't help."),
         cat: System,
         apply: "Dism.exe /Online /Cleanup-Image /RestoreHealth",
         ..T
@@ -1136,6 +1268,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "TRIM для всех SSD",
         desc: "Отправляет SSD команду TRIM: восстанавливает скорость записи.",
+        en: ("TRIM all SSDs", "Sends TRIM to your SSDs to restore write speed."),
         cat: System,
         apply: "Get-Volume | ? { $_.DriveLetter -and $_.DriveType -eq 'Fixed' } | % { Optimize-Volume -DriveLetter $_.DriveLetter -ReTrim -EA SilentlyContinue; \"  ✓ $($_.DriveLetter):\" }",
         ..T
@@ -1143,6 +1276,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Проверка диска при следующей загрузке",
         desc: "Планирует chkdsk C: /f при перезагрузке.",
+        en: ("Check disk on next boot", "Schedules chkdsk C: /f for the next restart."),
         cat: System,
         apply: "cmd /c 'echo Y| chkdsk C: /f' | Select-Object -Last 2",
         ..T
@@ -1150,6 +1284,7 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Обновить все программы (winget)",
         desc: "winget upgrade --all: обновляет установленные программы до последних версий.",
+        en: ("Update all apps (winget)", "winget upgrade --all: updates installed apps to the latest versions."),
         cat: System,
         apply: "winget upgrade --all --accept-source-agreements --accept-package-agreements --silent --include-unknown",
         ..T
@@ -1157,20 +1292,23 @@ pub static TWEAKS: &[Tweak] = &[
     Tweak {
         name: "Пересобрать кэш значков",
         desc: "Чинит пустые или неправильные значки в Проводнике.",
+        en: ("Rebuild icon cache", "Fixes blank or wrong icons in File Explorer."),
         cat: System,
-        apply: r#"ie4uinit.exe -show; Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -EA SilentlyContinue; RestartExplorer; '✓ Кэш значков сброшен'"#,
+        apply: r#"ie4uinit.exe -show; Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -EA SilentlyContinue; RestartExplorer; (T '✓ Кэш значков сброшен' '✓ Icon cache reset')"#,
         ..T
     },
     Tweak {
         name: "Отчёт о батарее",
         desc: "Создаёт battery-report.html на рабочем столе: износ и реальная ёмкость (для ноутбуков).",
+        en: ("Battery report", "Creates battery-report.html on your desktop: wear level and real capacity (laptops)."),
         cat: System,
-        apply: r#"$f = Join-Path ([Environment]::GetFolderPath('Desktop')) 'battery-report.html'; powercfg /batteryreport /output "$f" | Out-Null; if (Test-Path $f) { Start-Process $f; "✓ $f" } else { 'Батарея не найдена' }"#,
+        apply: r#"$f = Join-Path ([Environment]::GetFolderPath('Desktop')) 'battery-report.html'; powercfg /batteryreport /output "$f" | Out-Null; if (Test-Path $f) { Start-Process $f; "✓ $f" } else { (T 'Батарея не найдена' 'No battery found') }"#,
         ..T
     },
     Tweak {
         name: "Синхронизировать время",
         desc: "Принудительная синхронизация часов с time.windows.com.",
+        en: ("Sync time", "Forces a clock sync with time.windows.com."),
         cat: System,
         apply: "Start-Service w32time -EA SilentlyContinue; w32tm /resync /force",
         ..T
@@ -1178,44 +1316,45 @@ pub static TWEAKS: &[Tweak] = &[
 ];
 
 /// Встроенные приложения для модуля «Удаление мусора» (Appx-пакеты).
-pub const BLOAT: &[(&str, &str)] = &[
-    ("Microsoft.BingNews", "Новости"),
-    ("Microsoft.BingWeather", "Погода"),
-    ("Microsoft.BingSearch", "Поиск Bing"),
-    ("Microsoft.GetHelp", "Техподдержка"),
-    ("Microsoft.Getstarted", "Советы"),
-    ("Microsoft.MicrosoftSolitaireCollection", "Solitaire Collection"),
-    ("Microsoft.MicrosoftOfficeHub", "Microsoft 365 (Office Hub)"),
-    ("Microsoft.People", "Люди"),
-    ("Microsoft.WindowsFeedbackHub", "Центр отзывов"),
-    ("Microsoft.WindowsMaps", "Карты"),
-    ("Microsoft.ZuneMusic", "Медиаплеер (Groove)"),
-    ("Microsoft.ZuneVideo", "Кино и ТВ"),
-    ("Clipchamp.Clipchamp", "Clipchamp"),
-    ("Microsoft.Todos", "Microsoft To Do"),
-    ("MSTeams", "Teams (персональный)"),
-    ("MicrosoftTeams", "Teams (старый)"),
-    ("Microsoft.549981C3F5F10", "Cortana"),
-    ("Microsoft.PowerAutomateDesktop", "Power Automate"),
-    ("Microsoft.OutlookForWindows", "Новый Outlook"),
-    ("Microsoft.Copilot", "Copilot"),
-    ("Microsoft.Windows.DevHome", "Dev Home"),
-    ("Microsoft.MicrosoftStickyNotes", "Записки"),
-    ("Microsoft.WindowsAlarms", "Часы и будильник"),
-    ("Microsoft.WindowsSoundRecorder", "Звукозапись"),
-    ("Microsoft.YourPhone", "Связь с телефоном"),
-    ("Microsoft.Microsoft3DViewer", "3D Viewer"),
-    ("Microsoft.MixedReality.Portal", "Портал смешанной реальности"),
-    ("Microsoft.SkypeApp", "Skype"),
-    ("Microsoft.XboxApp", "Xbox Console Companion"),
-    ("Microsoft.GamingApp", "Xbox (нужен для Game Pass)"),
-    ("Microsoft.XboxGamingOverlay", "Xbox Game Bar"),
-    ("king.com.CandyCrushSaga", "Candy Crush Saga"),
-    ("king.com.CandyCrushSodaSaga", "Candy Crush Soda"),
-    ("SpotifyAB.SpotifyMusic", "Spotify (предустановленный)"),
-    ("Disney.37853FC22B2CE", "Disney+"),
-    ("Facebook.Facebook", "Facebook"),
-    ("BytedancePte.Ltd.TikTok", "TikTok"),
+/// (пакет, название RU, название EN)
+pub const BLOAT: &[(&str, &str, &str)] = &[
+    ("Microsoft.BingNews", "Новости", "News"),
+    ("Microsoft.BingWeather", "Погода", "Weather"),
+    ("Microsoft.BingSearch", "Поиск Bing", "Bing Search"),
+    ("Microsoft.GetHelp", "Техподдержка", "Get Help"),
+    ("Microsoft.Getstarted", "Советы", "Tips"),
+    ("Microsoft.MicrosoftSolitaireCollection", "Solitaire Collection", "Solitaire Collection"),
+    ("Microsoft.MicrosoftOfficeHub", "Microsoft 365 (Office Hub)", "Microsoft 365 (Office Hub)"),
+    ("Microsoft.People", "Люди", "People"),
+    ("Microsoft.WindowsFeedbackHub", "Центр отзывов", "Feedback Hub"),
+    ("Microsoft.WindowsMaps", "Карты", "Maps"),
+    ("Microsoft.ZuneMusic", "Медиаплеер (Groove)", "Media Player (Groove)"),
+    ("Microsoft.ZuneVideo", "Кино и ТВ", "Movies & TV"),
+    ("Clipchamp.Clipchamp", "Clipchamp", "Clipchamp"),
+    ("Microsoft.Todos", "Microsoft To Do", "Microsoft To Do"),
+    ("MSTeams", "Teams (персональный)", "Teams (personal)"),
+    ("MicrosoftTeams", "Teams (старый)", "Teams (classic)"),
+    ("Microsoft.549981C3F5F10", "Cortana", "Cortana"),
+    ("Microsoft.PowerAutomateDesktop", "Power Automate", "Power Automate"),
+    ("Microsoft.OutlookForWindows", "Новый Outlook", "New Outlook"),
+    ("Microsoft.Copilot", "Copilot", "Copilot"),
+    ("Microsoft.Windows.DevHome", "Dev Home", "Dev Home"),
+    ("Microsoft.MicrosoftStickyNotes", "Записки", "Sticky Notes"),
+    ("Microsoft.WindowsAlarms", "Часы и будильник", "Clock & Alarms"),
+    ("Microsoft.WindowsSoundRecorder", "Звукозапись", "Sound Recorder"),
+    ("Microsoft.YourPhone", "Связь с телефоном", "Phone Link"),
+    ("Microsoft.Microsoft3DViewer", "3D Viewer", "3D Viewer"),
+    ("Microsoft.MixedReality.Portal", "Портал смешанной реальности", "Mixed Reality Portal"),
+    ("Microsoft.SkypeApp", "Skype", "Skype"),
+    ("Microsoft.XboxApp", "Xbox Console Companion", "Xbox Console Companion"),
+    ("Microsoft.GamingApp", "Xbox (нужен для Game Pass)", "Xbox (needed for Game Pass)"),
+    ("Microsoft.XboxGamingOverlay", "Xbox Game Bar", "Xbox Game Bar"),
+    ("king.com.CandyCrushSaga", "Candy Crush Saga", "Candy Crush Saga"),
+    ("king.com.CandyCrushSodaSaga", "Candy Crush Soda", "Candy Crush Soda"),
+    ("SpotifyAB.SpotifyMusic", "Spotify (предустановленный)", "Spotify (preinstalled)"),
+    ("Disney.37853FC22B2CE", "Disney+", "Disney+"),
+    ("Facebook.Facebook", "Facebook", "Facebook"),
+    ("BytedancePte.Ltd.TikTok", "TikTok", "TikTok"),
 ];
 
 #[cfg(test)]
@@ -1236,6 +1375,7 @@ mod tests {
     fn every_toggle_can_be_checked_and_reverted() {
         for t in TWEAKS {
             assert!(!t.name.is_empty() && !t.desc.is_empty());
+            assert!(!t.en.0.is_empty() && !t.en.1.is_empty(), "{}: нет английского перевода", t.name);
             if t.is_action() {
                 assert!(!t.apply.is_empty(), "{}: пустое действие", t.name);
             } else {
@@ -1301,7 +1441,8 @@ impl Tweak {
 
     /// Строка, печатающая `@@STATE <i> <0|1>` для разбора в интерфейсе.
     pub fn state_line(&self, i: usize) -> String {
-        format!("try {{ if ($({})) {{ '@@STATE {i} 1' }} else {{ '@@STATE {i} 0' }} }} catch {{ '@@STATE {i} 0' }}", self.check_expr())
+        // 2>$null глушит stderr нативных команд (bcdedit, powercfg без прав админа)
+        format!("try {{ if ($(& {{ {} }} 2>$null)) {{ '@@STATE {i} 1' }} else {{ '@@STATE {i} 0' }} }} catch {{ '@@STATE {i} 0' }}", self.check_expr())
     }
 }
 

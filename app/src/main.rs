@@ -1,5 +1,6 @@
 #![windows_subsystem = "windows"]
 
+mod i18n;
 mod style;
 mod sys;
 mod tweaks;
@@ -7,7 +8,13 @@ mod ui;
 
 fn uninstall() {
     use windows_sys::Win32::UI::WindowsAndMessaging::{IDYES, MB_ICONQUESTION, MB_YESNO, MessageBoxW};
-    let (t, c) = (sys::wide("Удалить SparkTweak с компьютера?\n\nПрименённые твики останутся. Откатить их можно заранее кнопкой «Откатить все твики»."), sys::wide("SparkTweak"));
+    let (t, c) = (
+        sys::wide(i18n::l(
+            "Удалить SparkTweak с компьютера?\n\nПрименённые твики останутся. Откатить их можно заранее кнопкой «Откатить всё».",
+            "Remove SparkTweak from this PC?\n\nApplied tweaks stay in place. You can revert them first with \"Revert all\".",
+        )),
+        sys::wide("SparkTweak"),
+    );
     if unsafe { MessageBoxW(std::ptr::null_mut(), t.as_ptr(), c.as_ptr(), MB_YESNO | MB_ICONQUESTION) } != IDYES {
         return;
     }
@@ -19,10 +26,11 @@ Remove-Item 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SparkTwea
 Start-Process cmd.exe -ArgumentList '/c timeout /t 2 /nobreak >nul & rmdir /s /q "{dir}"' -WindowStyle Hidden"#
     );
     sys::run_ps(&script, |_| {});
-    sys::message_box("SparkTweak удалён.", "SparkTweak");
+    sys::message_box(i18n::l("SparkTweak удалён.", "SparkTweak has been removed."), "SparkTweak");
 }
 
 fn main() -> eframe::Result {
+    i18n::init();
     if !sys::is_admin() && std::env::var_os("SPARKTWEAK_NOELEVATE").is_none() && sys::relaunch_as_admin() {
         return Ok(());
     }

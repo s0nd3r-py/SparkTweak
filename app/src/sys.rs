@@ -40,6 +40,7 @@ pub const PRELUDE: &str = r#"
 $ProgressPreference = 'SilentlyContinue'
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
+function T($ru, $en) { if ($SparkEN) { $en } else { $ru } }
 function Reg($p, $n, $v, $t = 'DWord') { if (!(Test-Path $p)) { New-Item $p -Force | Out-Null }; Set-ItemProperty -Path $p -Name $n -Value $v -Type $t -Force }
 function Unreg($p, $n) { Remove-ItemProperty -Path $p -Name $n -Force -EA SilentlyContinue }
 function IsReg($p, $n, $v) { try { (Get-ItemProperty -Path $p -Name $n -EA Stop).$n -eq $v } catch { $false } }
@@ -52,12 +53,12 @@ function RestartExplorer {
   for ($i = 0; $i -lt 10 -and !(Get-Process explorer -EA SilentlyContinue); $i++) { Start-Sleep -Milliseconds 500 }
   # при AutoRestartShell=0 Windows сама Проводник не поднимет
   if (!(Get-Process explorer -EA SilentlyContinue)) { Start-Process "$env:windir\explorer.exe" }
-  '✓ Проводник перезапущен'
+  T '✓ Проводник перезапущен' '✓ File Explorer restarted'
 }
 function RestorePoint($d) {
   Reg 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' 'SystemRestorePointCreationFrequency' 0
   Enable-ComputerRestore -Drive "$env:SystemDrive\" -EA SilentlyContinue
-  try { Checkpoint-Computer -Description $d -RestorePointType MODIFY_SETTINGS -EA Stop; '✓ Точка восстановления создана' } catch { "⚠ Точка восстановления не создана: $($_.Exception.Message)" }
+  try { Checkpoint-Computer -Description $d -RestorePointType MODIFY_SETTINGS -EA Stop; T '✓ Точка восстановления создана' '✓ Restore point created' } catch { T "⚠ Точка восстановления не создана: $($_.Exception.Message)" "⚠ Restore point not created: $($_.Exception.Message)" }
 }
 "#;
 
@@ -69,9 +70,10 @@ pub fn run_ps(body: &str, mut on_line: impl FnMut(String)) -> bool {
     let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let path = dir.join(format!("job_{}_{n}.ps1", std::process::id()));
     // BOM обязателен: без него PowerShell 5.1 читает кириллицу как ANSI.
-    let script = format!("\u{feff}{PRELUDE}\n& {{\n{body}\n}} 2>&1 | ForEach-Object {{ \"$_\" }}\n");
+    let lang = if crate::i18n::en() { "$true" } else { "$false" };
+    let script = format!("\u{feff}$SparkEN = {lang}\n{PRELUDE}\n& {{\n{body}\n}} 2>&1 | ForEach-Object {{ \"$_\" }}\n");
     if let Err(e) = std::fs::write(&path, script) {
-        on_line(format!("✗ Не удалось записать скрипт: {e}"));
+        on_line(crate::lf!("✗ Не удалось записать скрипт: {e}", "✗ Could not write the script: {e}"));
         return false;
     }
     let child = Command::new("powershell.exe")
@@ -101,7 +103,7 @@ pub fn run_ps(body: &str, mut on_line: impl FnMut(String)) -> bool {
             c.wait().map(|s| s.success()).unwrap_or(false)
         }
         Err(e) => {
-            on_line(format!("✗ Не удалось запустить PowerShell: {e}"));
+            on_line(crate::lf!("✗ Не удалось запустить PowerShell: {e}", "✗ Could not start PowerShell: {e}"));
             false
         }
     };
@@ -174,10 +176,10 @@ pub enum MemCmd {
 impl MemCmd {
     pub fn label(self) -> &'static str {
         match self {
-            MemCmd::WorkingSets => "Рабочие наборы процессов",
-            MemCmd::ModifiedList => "Список изменённых страниц",
-            MemCmd::StandbyList => "Standby-список (кэш)",
-            MemCmd::LowPriorityStandby => "Standby низкого приоритета",
+            MemCmd::WorkingSets => crate::i18n::l("Рабочие наборы процессов", "Process working sets"),
+            MemCmd::ModifiedList => crate::i18n::l("Список изменённых страниц", "Modified page list"),
+            MemCmd::StandbyList => crate::i18n::l("Standby-список (кэш)", "Standby list (cache)"),
+            MemCmd::LowPriorityStandby => crate::i18n::l("Standby низкого приоритета", "Low-priority standby"),
         }
     }
 }

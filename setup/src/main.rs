@@ -1,6 +1,8 @@
 #![windows_subsystem = "windows"]
 #![allow(dead_code)] // sys.rs и style.rs общие с приложением, здесь нужна только часть
 
+#[path = "../../app/src/i18n.rs"]
+mod i18n;
 #[path = "../../app/src/style.rs"]
 mod style;
 #[path = "../../app/src/sys.rs"]
@@ -10,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, channel};
 
 use eframe::egui::{self, RichText, vec2};
+use i18n::l;
 use style::{DIM, MINT, RED, bold, glass, glass_accent};
 
 static APP_EXE: &[u8] = include_bytes!(env!("SPARK_APP_EXE"));
@@ -52,13 +55,22 @@ fn install(dir: PathBuf, desktop: bool, admin: bool) -> Result<PathBuf, String> 
     sys::run_ps("Stop-Process -Name sparktweak -Force -EA SilentlyContinue; Start-Sleep -Milliseconds 400", |_| {});
     std::fs::create_dir_all(&dir).map_err(|e| {
         if e.kind() == std::io::ErrorKind::PermissionDenied && !admin {
-            format!("Нет доступа к папке {}. Выберите другую папку или нажмите «Установить для всех» (нужны права администратора).", dir.display())
+            {
+                let d = dir.display();
+                lf!("Нет доступа к папке {d}. Выберите другую папку или нажмите «Установить для всех» (нужны права администратора).", "No access to {d}. Pick another folder or press \"Install for everyone\" (administrator rights required).")
+            }
         } else {
-            format!("Не удалось создать папку {}: {e}", dir.display())
+            {
+                let d = dir.display();
+                lf!("Не удалось создать папку {d}: {e}", "Could not create {d}: {e}")
+            }
         }
     })?;
     let exe = dir.join("SparkTweak.exe");
-    std::fs::write(&exe, APP_EXE).map_err(|e| format!("Не удалось записать {}: {e}", exe.display()))?;
+    std::fs::write(&exe, APP_EXE).map_err(|e| {
+        let f = exe.display();
+        lf!("Не удалось записать {f}: {e}", "Could not write {f}: {e}")
+    })?;
     let exe_s = exe.to_string_lossy();
     let q = |s: &str| sys::ps_quote(s);
     let (programs, desk, hive) = if admin { ("CommonPrograms", "CommonDesktopDirectory", "HKLM") } else { ("Programs", "DesktopDirectory", "HKCU") };
@@ -67,7 +79,7 @@ fn install(dir: PathBuf, desktop: bool, admin: bool) -> Result<PathBuf, String> 
 $ws = New-Object -ComObject WScript.Shell
 $links = @("$([Environment]::GetFolderPath('{programs}'))\SparkTweak.lnk")
 if ({desktop}) {{ $links += "$([Environment]::GetFolderPath('{desk}'))\SparkTweak.lnk" }}
-foreach ($l in $links) {{ $s = $ws.CreateShortcut($l); $s.TargetPath = $exe; $s.WorkingDirectory = {dir}; $s.Description = 'SparkTweak — оптимизация Windows'; $s.Save() }}
+foreach ($l in $links) {{ $s = $ws.CreateShortcut($l); $s.TargetPath = $exe; $s.WorkingDirectory = {dir}; $s.Description = (T 'SparkTweak — оптимизация Windows' 'SparkTweak — Windows optimizer'); $s.Save() }}
 $k = '{hive}:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SparkTweak'
 New-Item $k -Force | Out-Null
 $v = @{{ DisplayName = 'SparkTweak'; DisplayVersion = {ver}; Publisher = 'SparkTweak'; DisplayIcon = $exe; InstallLocation = {dir}; UninstallString = "`"$exe`" --uninstall"; URLInfoAbout = 'https://github.com/s0nd3r-py/SparkTweak' }}
@@ -75,7 +87,7 @@ foreach ($n in $v.Keys) {{ Set-ItemProperty $k -Name $n -Value $v[$n] }}
 Set-ItemProperty $k -Name NoModify -Value 1 -Type DWord
 Set-ItemProperty $k -Name NoRepair -Value 1 -Type DWord
 Set-ItemProperty $k -Name EstimatedSize -Value {kb} -Type DWord
-if (@($links | ? {{ !(Test-Path $_) }}).Count -eq 0 -and (Test-Path $k)) {{ 'OK' }} else {{ 'Не удалось создать ярлыки или запись в «Установленных приложениях»' }}"#,
+if (@($links | ? {{ !(Test-Path $_) }}).Count -eq 0 -and (Test-Path $k)) {{ 'OK' }} else {{ T 'Не удалось создать ярлыки или запись в «Установленных приложениях»' 'Could not create the shortcuts or the Installed apps entry' }}"#,
         exe = q(&exe_s),
         dir = q(&dir.to_string_lossy()),
         desktop = if desktop { "$true" } else { "$false" },
@@ -85,7 +97,8 @@ if (@($links | ? {{ !(Test-Path $_) }}).Count -eq 0 -and (Test-Path $k)) {{ 'OK'
     let mut out = vec![];
     sys::run_ps(&script, |l| out.push(l));
     if !exe.exists() {
-        return Err(format!("Файл не появился в {}", dir.display()));
+        let d = dir.display();
+        return Err(lf!("Файл не появился в {d}", "The file did not appear in {d}"));
     }
     if out.iter().any(|l| l == "OK") { Ok(dir) } else { Err(out.join("\n")) }
 }
@@ -117,7 +130,7 @@ impl eframe::App for Setup {
         let full = ui.max_rect();
         style::paint_background(ui, full, std::env::var_os("SPARKTWEAK_SOLID").is_some());
         let title = egui::Rect::from_min_size(full.min, vec2(full.width(), 34.0));
-        style::title_bar(ui, title, "SparkTweak", &format!("Установка · {VERSION}"));
+        style::title_bar(ui, title, "SparkTweak", &format!("{} · {VERSION}", l("Установка", "Setup")));
 
         if let State::Installing(rx) = &self.state
             && let Ok(r) = rx.try_recv()
@@ -133,7 +146,7 @@ impl eframe::App for Setup {
             ui.vertical_centered(|ui| {
                 style::logo(ui, 72.0);
                 ui.label(RichText::new("SparkTweak").font(egui::FontId::new(30.0, bold())));
-                ui.label(RichText::new(format!("Версия {VERSION} · оптимизация Windows в один клик")).color(DIM));
+                ui.label(RichText::new(lf!("Версия {VERSION} · оптимизация Windows в один клик", "Version {VERSION} · one-click Windows optimization")).color(DIM));
             });
             ui.add_space(14.0);
             match &self.state {
@@ -141,9 +154,9 @@ impl eframe::App for Setup {
                     glass().show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new("Папка установки").color(DIM));
+                            ui.label(RichText::new(l("Папка установки", "Install folder")).color(DIM));
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.small_button(format!("{}  Обзор", style::ic::DRIVES)).clicked()
+                                if ui.small_button(format!("{}  {}", style::ic::DRIVES, l("Обзор", "Browse"))).clicked()
                                     && let Some(d) = pick_folder()
                                 {
                                     self.dir = target_dir(&d).to_string_lossy().into();
@@ -152,15 +165,19 @@ impl eframe::App for Setup {
                         });
                         ui.add(egui::TextEdit::singleline(&mut self.dir).desired_width(f32::INFINITY).margin(vec2(10.0, 7.0)));
                         let target = target_dir(&self.dir);
-                        ui.label(RichText::new(format!("Будет создано: {}", target.join("SparkTweak.exe").display())).size(12.0).color(DIM));
+                        ui.label(RichText::new({
+                            let f = target.join("SparkTweak.exe");
+                            let f = f.display();
+                            lf!("Будет создано: {f}", "Will be created: {f}")
+                        }).size(12.0).color(DIM));
                         ui.add_space(4.0);
-                        ui.checkbox(&mut self.desktop, "Ярлык на рабочем столе");
-                        ui.checkbox(&mut self.launch, "Запустить SparkTweak после установки");
+                        ui.checkbox(&mut self.desktop, l("Ярлык на рабочем столе", "Desktop shortcut"));
+                        ui.checkbox(&mut self.launch, l("Запустить SparkTweak после установки", "Launch SparkTweak after setup"));
                     });
                     if !self.admin {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new("Установка только для вас (без прав администратора)").size(12.5).color(DIM));
-                            if ui.small_button(format!("{}  Установить для всех", style::ic::SHIELD)).clicked() && sys::relaunch_as_admin() {
+                            ui.label(RichText::new(l("Установка только для вас (без прав администратора)", "Installing for you only (no administrator rights)")).size(12.5).color(DIM));
+                            if ui.small_button(format!("{}  {}", style::ic::SHIELD, l("Установить для всех", "Install for everyone"))).clicked() && sys::relaunch_as_admin() {
                                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                             }
                         });
@@ -173,7 +190,7 @@ impl eframe::App for Setup {
                     }
                     ui.add_space(10.0);
                     ui.vertical_centered(|ui| {
-                        let label = if self.installed { "Переустановить" } else { "Установить" };
+                        let label = if self.installed { l("Переустановить", "Reinstall") } else { l("Установить", "Install") };
                         if style::primary_button(ui, label).clicked() {
                             let (tx, rx) = channel();
                             let (dir, desktop, admin, ctx) = (target_dir(&self.dir), self.desktop, self.admin, ui.ctx().clone());
@@ -190,7 +207,7 @@ impl eframe::App for Setup {
                         ui.set_width(ui.available_width());
                         ui.horizontal(|ui| {
                             ui.spinner();
-                            ui.label(RichText::new("Устанавливаю файлы, ярлыки и запись в «Установленных приложениях»…").color(MINT));
+                            ui.label(RichText::new(l("Устанавливаю файлы, ярлыки и запись в «Установленных приложениях»…", "Installing files, shortcuts and the Installed apps entry…")).color(MINT));
                         });
                     });
                     ui.ctx().request_repaint();
@@ -199,17 +216,20 @@ impl eframe::App for Setup {
                     let dir = dir.clone();
                     glass_accent(MINT).show(ui, |ui| {
                         ui.set_width(ui.available_width());
-                        ui.label(RichText::new("✓ SparkTweak установлен").font(egui::FontId::new(18.0, bold())).color(MINT));
-                        ui.label(RichText::new(format!("Папка: {}", dir.display())).color(DIM));
-                        ui.label(RichText::new("Ярлык — в меню «Пуск». Удалить можно в Параметрах → Приложения.").color(DIM));
+                        ui.label(RichText::new(l("✓ SparkTweak установлен", "✓ SparkTweak is installed")).font(egui::FontId::new(18.0, bold())).color(MINT));
+                        ui.label(RichText::new({
+                            let d = dir.display();
+                            lf!("Папка: {d}", "Folder: {d}")
+                        }).color(DIM));
+                        ui.label(RichText::new(l("Ярлык — в меню «Пуск». Удалить можно в Параметрах → Приложения.", "The shortcut is in the Start menu. Uninstall from Settings → Apps.")).color(DIM));
                     });
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
                         ui.add_space((ui.available_width() - 330.0).max(0.0) / 2.0);
-                        if style::button(ui, style::ic::DRIVES, "Открыть папку").clicked() {
+                        if style::button(ui, style::ic::DRIVES, l("Открыть папку", "Open folder")).clicked() {
                             let _ = std::process::Command::new("explorer.exe").arg(&dir).spawn();
                         }
-                        if style::primary_button(ui, if self.launch { "Запустить и закрыть" } else { "Готово" }).clicked() {
+                        if style::primary_button(ui, if self.launch { l("Запустить и закрыть", "Launch and close") } else { l("Готово", "Done") }).clicked() {
                             if self.launch {
                                 let _ = std::process::Command::new(dir.join("SparkTweak.exe")).spawn();
                             }
@@ -226,7 +246,7 @@ impl eframe::App for Setup {
 fn pick_folder() -> Option<String> {
     let mut out = None;
     sys::run_ps(
-        "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Куда установить SparkTweak'; if ($d.ShowDialog() -eq 'OK') { '@@DIR ' + $d.SelectedPath }",
+        "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = (T 'Куда установить SparkTweak' 'Where to install SparkTweak'); if ($d.ShowDialog() -eq 'OK') { '@@DIR ' + $d.SelectedPath }",
         |l| if let Some(d) = l.strip_prefix("@@DIR ") { out = Some(d.to_string()) },
     );
     out
@@ -259,12 +279,13 @@ mod tests {
 }
 
 fn main() -> eframe::Result {
+    i18n::init();
     if !sys::is_admin() && std::env::var_os("SPARKTWEAK_NOELEVATE").is_none() && sys::relaunch_as_admin() {
         return Ok(());
     }
     let opts = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Установка SparkTweak")
+            .with_title(l("Установка SparkTweak", "SparkTweak Setup"))
             .with_inner_size([560.0, 520.0])
             .with_resizable(false)
             .with_decorations(false)
