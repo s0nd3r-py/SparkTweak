@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Test (каталог твиков, генерация и разбор PowerShell)
+        run: cargo test -p sparktweak
+
+      - name: Build app
+        run: cargo build --release -p sparktweak
+
+      - name: Build installer (встраивает sparktweak.exe)
+        run: cargo build --release -p sparktweak-setup
+
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item dist -ItemType Directory | Out-Null
+          Copy-Item target/release/sparktweak.exe dist/SparkTweak-Portable.exe
+          Copy-Item target/release/SparkTweak-Setup.exe dist/SparkTweak-Setup.exe
+          Get-FileHash dist/*.exe -Algorithm SHA256 | % { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Set-Content dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SparkTweak
+          path: dist/*
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

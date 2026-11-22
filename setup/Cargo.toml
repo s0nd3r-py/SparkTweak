@@ -1,0 +1,17 @@
+[package]
+name = "sparktweak-setup"
+description = "SparkTweak installer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "SparkTweak-Setup"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.37.0"
+raw-window-handle = "0.6"
+window-vibrancy = "0.8.1"
+windows-sys = { version = "0.61.2", features = ["Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_SystemInformation", "Win32_Security", "Win32_System_Threading", "Win32_Foundation", "Win32_Graphics_Dwm"] }
