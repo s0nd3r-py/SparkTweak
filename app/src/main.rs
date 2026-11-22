@@ -14,8 +14,8 @@ fn uninstall() {
     let exe = std::env::current_exe().unwrap_or_default();
     let dir = exe.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
     let script = format!(
-        r#"Remove-Item "$([Environment]::GetFolderPath('CommonPrograms'))\SparkTweak.lnk","$([Environment]::GetFolderPath('CommonDesktopDirectory'))\SparkTweak.lnk" -Force -EA SilentlyContinue
-Remove-Item 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SparkTweak' -Recurse -Force -EA SilentlyContinue
+        r#"foreach ($f in 'CommonPrograms','CommonDesktopDirectory','Programs','DesktopDirectory') {{ Remove-Item "$([Environment]::GetFolderPath($f))\SparkTweak.lnk" -Force -EA SilentlyContinue }}
+Remove-Item 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SparkTweak','HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SparkTweak' -Recurse -Force -EA SilentlyContinue
 Start-Process cmd.exe -ArgumentList '/c timeout /t 2 /nobreak >nul & rmdir /s /q "{dir}"' -WindowStyle Hidden"#
     );
     sys::run_ps(&script, |_| {});
