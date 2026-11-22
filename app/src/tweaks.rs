@@ -260,13 +260,13 @@ pub static TWEAKS: &[Tweak] = &[
     // ───────────── Память ─────────────
     Tweak {
         name: "Отключить фоновые приложения",
-        desc: "UWP-приложения не работают в фоне и не держат память.",
+        desc: "UWP-приложения не работают в фоне. В Windows 11 может сломать переключение языка, уведомления и поиск.",
         cat: Memory,
         regs: &[
             Reg(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", D(1), Some(D(0))),
             Reg(SEARCH, "BackgroundAppGlobalToggle", D(0), Some(D(1))),
         ],
-        rec: true,
+        risk: true,
         ..T
     },
     Tweak {
@@ -768,8 +768,8 @@ pub static TWEAKS: &[Tweak] = &[
         name: "Классическое контекстное меню",
         desc: "В Windows 11 полное меню по правому клику открывается сразу, без «Показать дополнительные параметры».",
         cat: Interface,
-        apply: r"New-Item 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32' -Force -Value '' | Out-Null; Stop-Process -Name explorer -Force",
-        revert: r"Remove-Item 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}' -Recurse -Force; Stop-Process -Name explorer -Force",
+        apply: r"New-Item 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32' -Force -Value '' | Out-Null; RestartExplorer",
+        revert: r"Remove-Item 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}' -Recurse -Force; RestartExplorer",
         check: r"Test-Path 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32'",
         rec: true,
         ..T
@@ -880,7 +880,7 @@ pub static TWEAKS: &[Tweak] = &[
         name: "Перезапустить Проводник",
         desc: "Применяет изменения интерфейса без перезагрузки.",
         cat: Interface,
-        apply: "Stop-Process -Name explorer -Force; 'Проводник перезапущен'",
+        apply: "RestartExplorer",
         ..T
     },
     // ───────────── Службы ─────────────
@@ -1158,7 +1158,7 @@ pub static TWEAKS: &[Tweak] = &[
         name: "Пересобрать кэш значков",
         desc: "Чинит пустые или неправильные значки в Проводнике.",
         cat: System,
-        apply: r#"ie4uinit.exe -show; Stop-Process -Name explorer -Force; Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -EA SilentlyContinue; '✓ Кэш значков сброшен'"#,
+        apply: r#"ie4uinit.exe -show; Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -EA SilentlyContinue; RestartExplorer; '✓ Кэш значков сброшен'"#,
         ..T
     },
     Tweak {
@@ -1221,6 +1221,16 @@ pub const BLOAT: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Убить Проводник можно только через RestartExplorer: на ПК с AutoRestartShell=0 он сам не поднимется.
+    #[test]
+    fn explorer_is_never_killed_without_restart() {
+        for t in TWEAKS {
+            for s in [t.apply, t.revert] {
+                assert!(!s.contains("-Name explorer"), "{}: используйте RestartExplorer", t.name);
+            }
+        }
+    }
 
     #[test]
     fn every_toggle_can_be_checked_and_reverted() {

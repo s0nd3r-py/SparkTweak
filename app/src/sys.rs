@@ -47,6 +47,13 @@ function SvcOff([string[]]$n) { foreach ($s in $n) { if (Get-Service $s -EA Sile
 function SvcOn([string[]]$n, [string]$t = 'Manual') { foreach ($s in $n) { Set-Service $s -StartupType $t -EA SilentlyContinue } }
 function SvcIsOff([string[]]$n) { @($n | ? { $x = Get-Service $_ -EA SilentlyContinue; $x -and $x.StartType -ne 'Disabled' }).Count -eq 0 }
 function PcAc($sub, $set) { $m = [regex]::Matches("$(powercfg -q SCHEME_CURRENT $sub $set)", '0x[0-9a-fA-F]{8}'); [Convert]::ToInt32($m[$m.Count - 2].Value, 16) }
+function RestartExplorer {
+  Stop-Process -Name explorer -Force -EA SilentlyContinue
+  for ($i = 0; $i -lt 10 -and !(Get-Process explorer -EA SilentlyContinue); $i++) { Start-Sleep -Milliseconds 500 }
+  # при AutoRestartShell=0 Windows сама Проводник не поднимет
+  if (!(Get-Process explorer -EA SilentlyContinue)) { Start-Process "$env:windir\explorer.exe" }
+  '✓ Проводник перезапущен'
+}
 function RestorePoint($d) {
   Reg 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' 'SystemRestorePointCreationFrequency' 0
   Enable-ComputerRestore -Drive "$env:SystemDrive\" -EA SilentlyContinue
